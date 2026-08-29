@@ -1,0 +1,3376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asignador Semanal de Encuestas · SJD</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{
+    --purple:#57137D; --magenta:#A500BC; --green:#70AF25; --orange:#E27100;
+    --bg:#F6F5F8; --card:#FFFFFF; --ink:#2A2233; --muted:#6E647A; --line:#E4DFEA;
+    --danger:#C0392B; --danger-bg:#FBEAE8; --warn-bg:#FFF4E5;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  header{background:linear-gradient(100deg,var(--purple),var(--magenta));color:#fff;padding:22px 28px;position:relative;}
+  #btnBorrarTodo{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.5);color:#fff;font-weight:700;}
+  #btnBorrarTodo:hover{background:rgba(255,255,255,.28);opacity:1;}
+  header h1{margin:0;font-size:22px;font-weight:700;}
+  header p{margin:4px 0 0;font-size:13px;opacity:.9;}
+  .wrap{max-width:1280px;margin:0 auto;padding:20px 24px 60px;}
+  .tabs{display:flex;gap:6px;margin:18px 0;flex-wrap:wrap;}
+  .tab{padding:9px 16px;border-radius:8px 8px 0 0;background:#EAE6F0;color:var(--purple);font-weight:600;font-size:13px;cursor:pointer;border:1px solid var(--line);border-bottom:none;}
+  .tab.active{background:var(--card);color:var(--purple);border-bottom:3px solid var(--magenta);}
+  .panel{display:none;background:var(--card);border:1px solid var(--line);border-radius:0 8px 8px 8px;padding:20px;}
+  .panel.active{display:block;}
+  h2{font-size:16px;color:var(--purple);margin:0 0 12px;border-bottom:2px solid var(--line);padding-bottom:8px;}
+  h3{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 8px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px;}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;}
+  th{background:#F1EEF6;color:var(--purple);font-weight:600;}
+  input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
+    width:100%;padding:6px 7px;border:1px solid var(--line);border-radius:5px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  textarea{min-height:110px;font-family:Consolas,monospace;font-size:12px;}
+  button{cursor:pointer;border:none;border-radius:6px;padding:9px 16px;font-size:13px;font-weight:600;background:var(--purple);color:#fff;}
+  button:hover{opacity:.9;}
+  button.secondary{background:#EAE6F0;color:var(--purple);}
+  button.ok{background:var(--green);}
+  button.warn{background:var(--orange);}
+  button.small{padding:4px 9px;font-size:12px;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:10px;}
+  .row > div{flex:1;min-width:110px;}
+  .row label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px;}
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;}
+  .pill.cc{background:var(--purple);}
+  .pill.ee{background:var(--green);}
+  .pill.asq{background:var(--orange);}
+  .badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;}
+  .badge.ok{background:#E7F4DD;color:#3B6E13;}
+  .badge.risk{background:var(--danger-bg);color:var(--danger);}
+  .day-card{border:1px solid var(--line);border-radius:8px;margin-bottom:14px;overflow:hidden;}
+  .day-head{background:#F1EEF6;padding:8px 12px;font-weight:700;color:var(--purple);display:flex;justify-content:space-between;align-items:center;}
+  .day-body{padding:10px 12px;}
+  .agent-block{border-left:3px solid var(--line);padding:6px 0 6px 10px;margin-bottom:6px;}
+  .agent-block .name{font-weight:700;font-size:13px;}
+  .task-line{font-size:12.5px;color:var(--ink);margin:2px 0;}
+  .muted{color:var(--muted);font-size:12px;}
+  .risk-box{background:var(--danger-bg);border:1px solid #E8B9B3;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--danger);}
+  .risk-box ul{margin:6px 0 0;padding-left:18px;}
+  .toolbar{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;}
+  .kpi{background:#F9F8FB;border:1px solid var(--line);border-radius:8px;padding:10px 12px;}
+  .kpi .n{font-size:20px;font-weight:800;color:var(--purple);}
+  .kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;}
+  .footer-note{font-size:11.5px;color:var(--muted);margin-top:10px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:800px){.grid2{grid-template-columns:1fr;}}
+  .del-btn{background:var(--danger);color:#fff;}
+  .dropzone{border:2px dashed var(--line);border-radius:8px;padding:16px;text-align:center;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:10px;background:#FAFAFC;}
+  .dropzone:hover{border-color:var(--magenta);color:var(--purple);}
+  .dropzone.dragover{border-color:var(--magenta);background:#F5EEF8;color:var(--purple);}
+  .dropzone strong{color:var(--magenta);}
+  .or-sep{text-align:center;font-size:11px;color:var(--muted);margin:6px 0;}
+  .btn-detalle{background:none;border:1px solid var(--line);color:var(--purple);padding:3px 8px;font-size:11px;font-weight:700;border-radius:5px;white-space:nowrap;}
+  .btn-detalle:hover{background:#F1EEF6;opacity:1;}
+  .fila-detalle-cont{background:#FAFAFC;}
+  .fila-detalle-cont td{padding:10px 12px;}
+  table.detalle-mini{margin:0 0 8px;font-size:12px;}
+  table.detalle-mini th{background:#EDE9F2;font-size:10.5px;}
+  table.detalle-mini input[type=text],table.detalle-mini input[type=time],table.detalle-mini select{padding:4px 5px;font-size:12px;}
+  .detalle-add{margin-top:4px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Asignador Semanal de Encuestas · SJD</h1>
+  <p>ASQ · Comment Cards · Encuestas Específicas — reparto sin traslapes, alineado a cuota mensual</p>
+  <button id="btnBorrarTodo" class="del-btn" style="position:absolute;top:18px;right:18px;" onclick="borrarTodaLaInformacion()">🗑️ Borrar toda la información</button>
+</header>
+<div class="wrap">
+
+  <div class="tabs">
+    <div class="tab active" data-tab="semana">1 · Semana activa</div>
+    <div class="tab" data-tab="config">2 · Cuotas y avance</div>
+    <div class="tab" data-tab="horario">3 · Horario semanal</div>
+    <div class="tab" data-tab="asq">4 · Vuelos ASQ</div>
+    <div class="tab" data-tab="itinerario">5 · Itinerario mensual</div>
+    <div class="tab" data-tab="plan">6 · Generar plan</div>
+    <div class="tab" data-tab="cumplimiento">7 · Cumplimiento</div>
+    <div class="tab" data-tab="dashboard">8 · Dashboard</div>
+  </div>
+
+  <!-- ===================== PANEL 0: SEMANA ACTIVA ===================== -->
+  <div class="panel active" id="panel-semana">
+    <h2>Semana que vamos a asignar</h2>
+    <p class="muted">Crea o activa aquí la semana de trabajo. El horario, los vuelos ASQ, el itinerario y el plan siempre se refieren a esta semana activa.</p>
+    <div class="row">
+      <div><label>Fecha de inicio de la semana (Lunes)</label><input type="date" id="weekStart" onchange="onWeekStartChange()"></div>
+      <div><button onclick="onWeekStartChange()">Crear / Activar esta semana</button></div>
+    </div>
+    <h3>Semanas ya creadas</h3>
+    <div id="lista-semanas"></div>
+  </div>
+
+  <!-- ===================== PANEL 1: CONFIG ===================== -->
+  <div class="panel" id="panel-config">
+    <h2>Cuota mensual SJD y avance actual</h2>
+    <p class="muted">Precargado con la cuota mensual de SJD (Distribución CC/EE, archivo trimestral). Ajusta si tu cuota del mes cambia, y captura el avance real que ya llevas para que el plan reparta solo lo que falta.</p>
+
+    <h3>Comment Cards — cuota mensual por aerolínea</h3>
+    <table id="tabla-cc-quota">
+      <thead><tr><th>Aerolínea</th><th>Código</th><th>Cuota Llegada</th><th>Cuota Salida</th><th>Realizadas Llegada (avance)</th><th>Realizadas Salida (avance)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="toolbar">
+      <button class="secondary small" onclick="addCCRow()">+ Aerolínea</button>
+    </div>
+
+    <h3>Encuestas Específicas — cuota mensual por categoría</h3>
+    <table id="tabla-ee-quota">
+      <thead><tr><th>Categoría</th><th>Cuota mensual</th><th>Realizadas (avance)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <h3>Parámetros de reparto</h3>
+    <div class="row">
+      <div><label>Semanas restantes del mes (incluyendo ésta)</label><input type="number" id="semanasRestantes" min="1" value="4"></div>
+      <div><label>Piso mínimo por día de semana (% de la cuota mensual)</label><input type="number" id="pisoPct" value="8.5" step="0.1"></div>
+      <div><label>Margen extra mensual — Comment Cards (libre)</label><input type="number" id="margenCC" min="0" value="20"></div>
+      <div><label>Margen extra mensual — Específicas (libre)</label><input type="number" id="margenEE" min="0" value="20"></div>
+      <div><label>Cuota estándar de encuestas CC por vuelo</label><input type="number" id="cuotaPorVuelo" min="1" value="5"></div>
+      <div><label>Máximo absoluto de encuestas CC por vuelo</label><input type="number" id="cuotaPorVueloMax" min="1" value="5"></div>
+      <div><label>Horas antes del vuelo en que ya se puede encuestar</label><input type="number" id="ventanaHorasAntes" min="0" step="0.5" value="2"></div>
+      <div><label>Máximo de vuelos con CC por día</label><input type="number" id="maxVuelosPorDiaCC" min="1" value="3"></div>
+      <div><label>Máximo de vuelos con CC por día (sin ASQ esta semana)</label><input type="number" id="maxVuelosPorDiaCCSinASQ" min="1" value="5"></div>
+      <div><label>Máximo de vuelos con EE por día</label><input type="number" id="maxVuelosPorDiaEE" min="1" value="2"></div>
+    </div>
+    <p class="muted">La cuota por vuelo reparte tanto CC como EE en bloques de este tamaño por vuelo; si al cerrar la semana sobra un número menor, se asigna tal cual (no se fuerza al estándar), pero nunca se rebasa el máximo absoluto por vuelo. La ventana de horas antes del vuelo se usa para decidir qué turno cubre cada vuelo (y por lo tanto para detectar riesgos de "sin cobertura"). Los máximos por día limitan cuántos vuelos distintos reciben CC o EE el mismo día (el de CC sube automáticamente al tope "sin ASQ" cuando esa semana no tiene ningún vuelo ASQ cargado), para no saturar la jornada.
+    <p class="muted">El margen se suma como encuestas "libres" adicionales a la cuota mensual, para dar colchón ante incumplimientos. No se descuenta de ninguna aerolínea/categoría en particular; el plan las reparte como tareas sueltas entre el personal disponible.</p>
+
+    <h3>Personal excluido de encuestas</h3>
+    <div class="row">
+      <div style="flex:2"><label>Nombres separados por coma (sin capacitación para aplicar encuestas)</label><input type="text" id="agentesExcluidos" placeholder="Yolanda, Heidi"></div>
+    </div>
+    <p class="muted">Este personal nunca recibe tareas de ASQ, CC ni EE al generar el plan, aunque aparezca en el horario de la semana.</p>
+
+    <h3>Usuario de captura por persona (portal de Corporativo)</h3>
+    <p class="muted">Solo confirmé 5 de 15 en tus reportes de junio y agosto — el resto no aparece en ningún registro histórico, así que los dejé en blanco. Complétalos tú; en cuanto lo hagas, el detalle de cumplimiento los va a prellenar solo.</p>
+    <table id="tabla-usuarios">
+      <thead><tr><th>Personal</th><th>Usuario de captura</th><th>Origen</th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="toolbar">
+      <button class="ok" onclick="guardarTodo()">Guardar</button>
+      <button class="secondary" onclick="exportarJSON()">Exportar respaldo completo (JSON)</button>
+      <button class="secondary" onclick="document.getElementById('importFile').click()">Importar respaldo completo</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarJSON(event)">
+    </div>
+    <h3>Información mensual (cuotas, roster, ASQ, itinerario, parámetros)</h3>
+    <p class="muted">A diferencia del respaldo completo, esto NO incluye las semanas ya armadas — solo lo que se repite mes a mes. Úsalo para cargar rápido la información mensual en otro dispositivo o sesión, sin perder tus semanas guardadas.</p>
+    <div class="toolbar">
+      <button class="secondary" onclick="exportarMensual()">Exportar información mensual (JSON)</button>
+      <button class="secondary" onclick="document.getElementById('importMensualFile').click()">Importar información mensual</button>
+      <input type="file" id="importMensualFile" accept=".json" style="display:none" onchange="importarMensual(event)">
+    </div>
+  </div>
+
+  <!-- ===================== PANEL 2: HORARIO ===================== -->
+  <div class="panel" id="panel-horario">
+    <h2>Horario semanal del equipo</h2>
+    <p class="muted">Semana activa: <strong id="horario-semana-label">ninguna — actívala en la pestaña "1 · Semana activa"</strong></p>
+    <div class="row">
+      <div style="flex:2"><label>Roster (nombres separados por coma)</label><input type="text" id="rosterInput" onchange="onRosterChange()"></div>
+    </div>
+
+    <h3>Pegar horario exportado del Planificador EPAC (opcional)</h3>
+    <p class="muted">Sube o arrastra el archivo (PDF, HTML o TXT de tu "Vista para el personal"), o pega el texto manualmente si el pegado funciona en tu dispositivo.</p>
+    <div class="dropzone" id="dropHorario">
+      📄 Arrastra aquí el archivo del horario, o <strong>toca para seleccionar</strong> (.pdf, .html, .txt)
+      <input type="file" id="fileHorario" accept=".pdf,.html,.htm,.txt" style="display:none">
+    </div>
+    <div class="or-sep">— o pega el texto aquí —</div>
+    <textarea id="pasteHorario" placeholder="Lunes 20 De Julio De 2026&#10;Terminal 1&#10;Alejandra   Todas las áreas   6:00 A.M. - 3:00 P.M. ...&#10;..."></textarea>
+    <div class="toolbar"><button onclick="parsearHorario()">Interpretar y cargar horario</button></div>
+
+    <h3>Turnos por día (editable)</h3>
+    <div id="dias-horario"></div>
+  </div>
+
+  <!-- ===================== PANEL 3: ASQ ===================== -->
+  <div class="panel" id="panel-asq">
+    <h2>Vuelos con encuesta ASQ asignada</h2>
+    <p class="muted">Sube o arrastra el archivo (PDF o TXT) de tu lista ASQ del mes, o pega el texto manualmente si el pegado funciona en tu dispositivo. Formato esperado: Aeropuerto · Periodo · Fecha · Día · Destino · Vuelo · Hora · Aerolínea · Número de encuestas. Queda guardado en la herramienta (no hay que volver a cargarlo cada vez); al subir un mes nuevo, o una versión actualizada del mismo mes, se sustituye automáticamente solo ese mes.</p>
+    <div class="dropzone" id="dropASQ">
+      📄 Arrastra aquí el archivo de la lista ASQ, o <strong>toca para seleccionar</strong> (.pdf, .txt)
+      <input type="file" id="fileASQ" accept=".pdf,.txt,.csv" style="display:none">
+    </div>
+    <div class="or-sep">— o pega el texto aquí —</div>
+    <textarea id="pasteASQ" placeholder="SJD   Q3   20/07/2026   lunes   MEX   381   09:25   AM   2"></textarea>
+    <div class="toolbar"><button onclick="parsearASQ()">Interpretar y cargar vuelos</button></div>
+
+    <h3>Vuelos cargados (todos los meses) — se usan los que caen en la semana activa</h3>
+    <table id="tabla-asq">
+      <thead><tr><th>Fecha</th><th>Hora</th><th>Destino</th><th>Vuelo</th><th>Aerolínea</th><th>N.º encuestas</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="toolbar"><button class="secondary small" onclick="addASQRow()">+ Vuelo manual</button></div>
+
+    <h3>¿Aún no tienes la asignación mensual de ASQ?</h3>
+    <p class="muted">Genera el plan de la semana activa solo con Comment Cards y Específicas, sin esperar a la asignación ASQ. Cuando la tengas, carga los vuelos aquí y vuelve a generar el plan para incluirla.</p>
+    <div class="toolbar"><button class="warn" onclick="generarPlanSinASQ()">Generar plan sin ASQ</button></div>
+  </div>
+
+  <!-- ===================== PANEL ITINERARIO ===================== -->
+  <div class="panel" id="panel-itinerario">
+    <h2>Itinerario mensual de vuelos</h2>
+    <p class="muted">Sube el Excel de itinerario diario del mes (una hoja por día, formato Compañía / Vuelo llegada / Vuelo salida / Llega / Sale / Origen / Destino). La herramienta separa cada renglón en un evento de llegada y uno de salida, y con eso reparte las Comment Cards atadas a un vuelo y horario reales de esa aerolínea. Las Encuestas Específicas siguen repartiéndose por bloque de día, sin vuelo. Queda guardado en la herramienta; al subir un mes nuevo, o una versión actualizada, se sustituye automáticamente solo ese mes.</p>
+    <div class="row">
+      <div><label>Archivo de itinerario (.xlsx)</label><input type="file" id="itinerarioFile" accept=".xlsx,.xls" onchange="cargarItinerario(event)"></div>
+    </div>
+    <p class="muted" id="itinerario-total"></p>
+    <h3>Resumen de vuelos en la semana activa</h3>
+    <div id="itinerario-resumen"></div>
+  </div>
+
+  <!-- ===================== PANEL 4: PLAN ===================== -->
+  <div class="panel" id="panel-plan">
+    <h2>Plan semanal de asignación</h2>
+    <div class="toolbar">
+      <button onclick="generarPlan()">Generar plan de la semana</button>
+      <button class="ok" onclick="marcarSemanaCompletada()">Actualizar avance mensual (solo lo marcado como Realizado)</button>
+    </div>
+    <div id="kpis"></div>
+    <div id="riesgos"></div>
+    <div class="toolbar">
+      <button class="secondary" onclick="exportarPlanHTML()">📄 Generar HTML para compartir con el personal</button>
+      <button class="secondary" onclick="exportarPlanPDF()">🖨️ Generar PDF (imprimir)</button>
+    </div>
+    <p class="muted footer-note">El HTML se descarga como archivo independiente con filtro por día y buscador por nombre, para que cada quien vea solo lo suyo. El PDF abre el diálogo de impresión del navegador — elige "Guardar como PDF".</p>
+    <div id="plan-dias"></div>
+  </div>
+
+  <!-- ===================== PANEL CUMPLIMIENTO ===================== -->
+  <div class="panel" id="panel-cumplimiento">
+    <h2>Cumplimiento de la semana</h2>
+    <p class="muted">Marca lo que ya se realizó y anota los comentarios que se obtuvieron en las encuestas. Se guarda solo, y se conserva aunque vuelvas a generar el plan (mientras la tarea siga existiendo).</p>
+    <div id="cumplimiento-tabla"></div>
+
+    <h3>Vuelos extra realizados (fuera del plan)</h3>
+    <p class="muted">Para cuando alguien encuestó un vuelo que no estaba contemplado en el plan de la semana. Se suma directo al avance mensual al guardarlo (ya está realizado por definición).</p>
+    <div class="row">
+      <div><label>Tipo</label><select id="extraTipo" onchange="onExtraTipoChange()"><option value="cc">CC</option><option value="ee">EE</option></select></div>
+      <div><label id="extraCategoriaLabel">Aerolínea</label><select id="extraCategoria"></select></div>
+      <div id="extraLlegadaSalidaWrap"><label>Llegada/Salida</label><select id="extraLlegadaSalida"><option>Llegada</option><option>Salida</option></select></div>
+      <div><label>Fecha</label><input type="date" id="extraFecha"></div>
+      <div><label>Vuelo (opcional)</label><input type="text" id="extraVuelo"></div>
+      <div><label>Hora (opcional)</label><input type="time" id="extraHora"></div>
+    </div>
+    <div class="row">
+      <div><label>N.º encuestas</label><input type="number" id="extraCantidad" min="1" value="1"></div>
+      <div><label>Personal</label><select id="extraAgente"></select></div>
+      <div style="flex:2"><label>Comentarios (opcional)</label><input type="text" id="extraComentarios"></div>
+    </div>
+    <div class="toolbar"><button class="ok" onclick="agregarExtra()">+ Registrar vuelo extra</button></div>
+    <div id="extras-lista"></div>
+
+    <h3>Importar historial ya realizado (retroactivo)</h3>
+    <p class="muted">Para cargar de golpe encuestas ya hechas antes de usar esta herramienta (ej. un reporte de Corporativo). Se agregan como "vuelos extra" con su fecha real, agrupadas en una semana. Márcalas ya como contabilizadas si ese total ya lo cargaste en "2 · Cuotas y avance", para no duplicarlo cuando uses "Actualizar avance mensual".</p>
+    <div class="toolbar">
+      <input type="file" id="inputHistorialCumplimiento" accept="application/json" onchange="importarHistorialCumplimiento(event)" style="display:none">
+      <button class="secondary" onclick="document.getElementById('inputHistorialCumplimiento').click()">📥 Importar historial (JSON)</button>
+    </div>
+
+    <h3>Exportar historial de todo lo registrado</h3>
+    <p class="muted">Descarga en un solo JSON cada encuesta capturada en Cumplimiento (todas las semanas guardadas) más los vuelos extra, con su fecha, encuestador, comentario y estado. Sirve como respaldo o para dárselo a alguien más de tu equipo.</p>
+    <div class="toolbar">
+      <button class="ok" onclick="exportarHistorialCumplimiento()">📤 Generar historial (JSON)</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-dashboard">
+
+  <h2>Dashboard</h2>
+
+  <div id="dashboard-kpis"></div>
+
+</div>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'asignador_encuestas_sjd_v1';
+const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+const DEFAULT_ROSTER = ['Alejandra','Blanca','Martín','Carlos','Giovanna','Jesús','Nadia','Fernanda','Yolanda','Heidi','José Luis','Linda','Alan','Yesenia','Karen'];
+const AGENTES_SIN_ASQ = [
+  'Nadia',
+  'Fernanda',
+  'Yesenia'
+];
+function agentePuedeASQ(nombre){
+  return !AGENTES_SIN_ASQ
+    .map(x => x.toLowerCase())
+    .includes((nombre || '').toLowerCase());
+}
+// Cuota mensual SJD precargada (Distribución CC/EE — archivo trimestral, SJD, valor por mes)
+const DEFAULT_CC_QUOTA = [
+  {code:'VOI', name:'Volaris', llegada:11, salida:32},
+  {code:'VIV', name:'Viva Aerobus', llegada:10, salida:26},
+  {code:'AMX', name:'Aeroméxico', llegada:4, salida:11},
+  {code:'AAL', name:'American Airlines', llegada:9, salida:28},
+  {code:'UAL', name:'United Airlines', llegada:7, salida:20},
+  {code:'ASA', name:'Alaska Airlines', llegada:7, salida:21},
+  {code:'DAL', name:'Delta Airlines', llegada:5, salida:15},
+  {code:'SWA', name:'Southwest Airlines', llegada:5, salida:15},
+  {code:'WJA', name:'Westjet', llegada:2, salida:7},
+  {code:'JBU', name:'Jetblue Airways', llegada:1, salida:4},
+];
+const DEFAULT_EE_QUOTA = [
+  {name:'Wifi', cuota:21},
+  {name:'Estacionamiento', cuota:4},
+  {name:'Ambiente-Comodidad', cuota:10},
+  {name:'Sanitarios', cuota:4},
+];
+
+// Usuario de captura del portal de Corporativo, confirmado cruzando ENCUESTADOR vs USUARIO
+// en tus reportes reales de junio y agosto 2026 (columna T). Solo cubre a quien SÍ aparece
+// con un usuario propio y consistente en esos archivos — el resto queda vacío para que lo
+// completes tú (ver pestaña "2 · Cuotas y avance").
+const DEFAULT_USUARIOS_MAP = {
+  'Alan': 'clegorretat',
+  'Giovanna': 'gurias',
+  'Alejandra': 'aandradeja',
+  'Karen': 'kcamposc',
+  'Martín': 'jmarabelc'
+};
+
+let state = null;
+
+function defaultState(){
+  return {
+    roster: DEFAULT_ROSTER.slice(),
+    ccQuota: JSON.parse(JSON.stringify(DEFAULT_CC_QUOTA)).map(r=>({...r, avanceLlegada:0, avanceSalida:0})),
+    eeQuota: JSON.parse(JSON.stringify(DEFAULT_EE_QUOTA)).map(r=>({...r, avance:0})),
+    semanasRestantes: 4,
+    pisoPct: 8.5,
+    margenCC: 20,
+    margenEE: 20,
+    cuotaPorVuelo: 5,
+    cuotaPorVueloMax: 5,
+    ventanaHorasAntes: 2,
+    maxVuelosPorDiaCC: 3,
+    maxVuelosPorDiaCCSinASQ: 5,
+    maxVuelosPorDiaEE: 2,
+    agentesExcluidos: ['Yolanda','Heidi','Jesús'],
+    usuariosMap: {...DEFAULT_USUARIOS_MAP},
+    weeks: {} // keyed by weekStart date (YYYY-MM-DD): { turnos: {fecha: [ {agente,terminal,area,inicio,fin,disponible,motivo} ]}, plan:null }
+    ,asqAll: [] // {fecha (YYYY-MM-DD), hora, destino, vuelo, aerolinea, cantidad}
+    ,itinerarioMensual: [] // {fecha, hora, tipo:'Llegada'|'Salida', aerolinea, vuelo, lugar}
+    ,currentWeekStart: null
+  };
+}
+
+function load(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){
+    try{ state = JSON.parse(raw); }catch(e){ state = defaultState(); }
+  } else {
+    state = defaultState();
+  }
+  if(!state.asqAll) state.asqAll = [];
+  if(!state.weeks) state.weeks = {};
+  if(!state.itinerarioMensual) state.itinerarioMensual = [];
+  if(state.margenCC===undefined) state.margenCC = 20;
+  if(state.margenEE===undefined) state.margenEE = 20;
+  if(state.cuotaPorVuelo===undefined) state.cuotaPorVuelo = 5;
+  if(state.cuotaPorVueloMax===undefined) state.cuotaPorVueloMax = 5;
+  if(state.ventanaHorasAntes===undefined) state.ventanaHorasAntes = 2;
+  if(state.maxVuelosPorDiaCC===undefined) state.maxVuelosPorDiaCC = 3;
+  if(state.maxVuelosPorDiaCCSinASQ===undefined) state.maxVuelosPorDiaCCSinASQ = 5;
+  if(state.maxVuelosPorDiaEE===undefined) state.maxVuelosPorDiaEE = 2;
+  if(state.agentesExcluidos===undefined) state.agentesExcluidos = ['Yolanda','Heidi'];
+  if(state.usuariosMap===undefined) state.usuariosMap = {...DEFAULT_USUARIOS_MAP};
+}
+
+function borrarTodaLaInformacion(){
+  if(!confirm('Esto borra TODO lo capturado en esta herramienta: cuotas, avance mensual, horarios, semanas, planes generados y cumplimiento. No se puede deshacer. ¿Continuar?')) return;
+  const escrito = prompt('Para confirmar, escribe BORRAR (en mayúsculas):');
+  if(escrito !== 'BORRAR'){ alert('Cancelado. No se borró nada.'); return; }
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// ---------- TABS ----------
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+  });
+});
+
+// ---------- RENDER CONFIG ----------
+function renderConfig(){
+  const tbCC = document.querySelector('#tabla-cc-quota tbody');
+  tbCC.innerHTML = '';
+  state.ccQuota.forEach((r,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${r.name}" onchange="state.ccQuota[${i}].name=this.value;save()"></td>
+      <td><input type="text" value="${r.code}" onchange="state.ccQuota[${i}].code=this.value;save()"></td>
+      <td><input type="number" value="${r.llegada}" onchange="state.ccQuota[${i}].llegada=+this.value;save()"></td>
+      <td><input type="number" value="${r.salida}" onchange="state.ccQuota[${i}].salida=+this.value;save()"></td>
+      <td><input type="number" value="${r.avanceLlegada}" onchange="state.ccQuota[${i}].avanceLlegada=+this.value;save()"></td>
+      <td><input type="number" value="${r.avanceSalida}" onchange="state.ccQuota[${i}].avanceSalida=+this.value;save()"></td>
+    `;
+    tbCC.appendChild(tr);
+  });
+
+  const tbEE = document.querySelector('#tabla-ee-quota tbody');
+  tbEE.innerHTML = '';
+  state.eeQuota.forEach((r,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${r.name}" onchange="state.eeQuota[${i}].name=this.value;save()"></td>
+      <td><input type="number" value="${r.cuota}" onchange="state.eeQuota[${i}].cuota=+this.value;save()"></td>
+      <td><input type="number" value="${r.avance}" onchange="state.eeQuota[${i}].avance=+this.value;save()"></td>
+    `;
+    tbEE.appendChild(tr);
+  });
+
+  renderUsuariosMap();
+
+  document.getElementById('semanasRestantes').value = state.semanasRestantes;
+  document.getElementById('pisoPct').value = state.pisoPct;
+  document.getElementById('margenCC').value = state.margenCC;
+  document.getElementById('margenEE').value = state.margenEE;
+  document.getElementById('cuotaPorVuelo').value = state.cuotaPorVuelo;
+  document.getElementById('cuotaPorVueloMax').value = state.cuotaPorVueloMax;
+  document.getElementById('ventanaHorasAntes').value = state.ventanaHorasAntes;
+  document.getElementById('maxVuelosPorDiaCC').value = state.maxVuelosPorDiaCC;
+  document.getElementById('maxVuelosPorDiaCCSinASQ').value = state.maxVuelosPorDiaCCSinASQ;
+  document.getElementById('maxVuelosPorDiaEE').value = state.maxVuelosPorDiaEE;
+  document.getElementById('agentesExcluidos').value = (state.agentesExcluidos||[]).join(', ');
+  document.getElementById('rosterInput').value = state.roster.join(', ');
+}
+function renderUsuariosMap(){
+  const tb = document.querySelector('#tabla-usuarios tbody');
+  if(!tb) return;
+  tb.innerHTML = '';
+  state.roster.forEach(nombre=>{
+    const valor = (state.usuariosMap && state.usuariosMap[nombre]) || '';
+    const confirmado = DEFAULT_USUARIOS_MAP[nombre] !== undefined;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${nombre}</td>
+      <td><input type="text" value="${valor.replace(/"/g,'&quot;')}" placeholder="ej. jperezm" onchange="editarUsuarioCodigo('${nombre.replace(/'/g,"\\'")}',this.value)"></td>
+      <td class="muted">${confirmado ? 'Confirmado en reportes jun/ago' : 'Sin dato — complétalo'}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function editarUsuarioCodigo(nombre, valor){
+  if(!state.usuariosMap) state.usuariosMap = {};
+  state.usuariosMap[nombre] = valor.trim();
+  save();
+}
+
+function addCCRow(){
+  state.ccQuota.push({code:'', name:'Nueva aerolínea', llegada:0, salida:0, avanceLlegada:0, avanceSalida:0});
+  save(); renderConfig();
+}
+function guardarTodo(){
+  state.semanasRestantes = +document.getElementById('semanasRestantes').value || 1;
+  state.pisoPct = +document.getElementById('pisoPct').value || 0;
+  state.margenCC = +document.getElementById('margenCC').value || 0;
+  state.margenEE = +document.getElementById('margenEE').value || 0;
+  state.cuotaPorVuelo = +document.getElementById('cuotaPorVuelo').value || 5;
+  state.cuotaPorVueloMax = +document.getElementById('cuotaPorVueloMax').value || 5;
+  state.ventanaHorasAntes = +document.getElementById('ventanaHorasAntes').value || 0;
+  state.maxVuelosPorDiaCC = +document.getElementById('maxVuelosPorDiaCC').value || 3;
+  state.maxVuelosPorDiaCCSinASQ = +document.getElementById('maxVuelosPorDiaCCSinASQ').value || 5;
+  state.maxVuelosPorDiaEE = +document.getElementById('maxVuelosPorDiaEE').value || 2;
+  state.agentesExcluidos = document.getElementById('agentesExcluidos').value.split(',').map(s=>s.trim()).filter(Boolean);
+  save();
+  renderExtraAgentes();
+  alert('Guardado.');
+}
+function onRosterChange(){
+  state.roster = document.getElementById('rosterInput').value.split(',').map(s=>s.trim()).filter(Boolean);
+  save();
+  renderExtraAgentes();
+  renderUsuariosMap();
+}
+
+// ---------- WEEK HELPERS ----------
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function parseISO(s){ const [y,m,dd] = s.split('-').map(Number); return new Date(y,m-1,dd); }
+function addDays(d,n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function diaSemanaLabel(d){ let idx = d.getDay(); idx = idx===0?6:idx-1; return DIAS_SEMANA[idx]; }
+function fmtLegible(d){ return `${diaSemanaLabel(d)} ${d.getDate()} de ${['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][d.getMonth()]}`; }
+
+function currentWeek(){
+  if(!state.currentWeekStart) return null;
+  if(!state.weeks[state.currentWeekStart]){
+    state.weeks[state.currentWeekStart] = { turnos:{}, plan:null, extras:[] };
+  }
+  if(!state.weeks[state.currentWeekStart].extras) state.weeks[state.currentWeekStart].extras = [];
+  return state.weeks[state.currentWeekStart];
+}
+
+function onWeekStartChange(){
+  const v = document.getElementById('weekStart').value;
+  if(!v) return;
+  state.currentWeekStart = v;
+  currentWeek(); // ensures the week object exists
+  save();
+  renderDiasHorario();
+  renderASQTable();
+  renderItinerarioResumen();
+  renderSemanas();
+  const label = document.getElementById('horario-semana-label');
+  if(label) label.textContent = fmtLegible(parseISO(v)) + ' — ' + fmtLegible(addDays(parseISO(v),6));
+  renderExtras();
+  if(currentWeek().plan){ renderPlan(); renderCumplimiento(); } else { renderCumplimiento(); }
+}
+
+function renderSemanas(){
+  const cont = document.getElementById('lista-semanas');
+  if(!cont) return;
+  const keys = Object.keys(state.weeks).sort();
+  if(keys.length===0){ cont.innerHTML = '<p class="muted">Aún no has creado ninguna semana.</p>'; return; }
+  cont.innerHTML = keys.map(k=>{
+    const w = state.weeks[k];
+    const start = parseISO(k); const end = addDays(start,6);
+    const turnos = Object.values(w.turnos||{}).reduce((s,arr)=>s+arr.length,0);
+    const activa = k===state.currentWeekStart;
+    return `<div class="day-card" style="${activa?'border:2px solid var(--magenta);':''}">
+      <div class="day-head"><span>${fmtLegible(start)} — ${fmtLegible(end)} ${activa?'<span class="badge ok">ACTIVA</span>':''}</span>
+      <span>
+        ${activa?'':`<button class="secondary small" onclick="seleccionarSemana('${k}')">Activar</button> `}
+        <button class="del-btn small" onclick="eliminarSemana('${k}')">Eliminar</button>
+      </span></div>
+      <div class="day-body muted">${turnos} turnos cargados · ${w.plan?'plan generado':'plan pendiente'}</div>
+    </div>`;
+  }).join('');
+}
+function seleccionarSemana(k){
+  state.currentWeekStart = k;
+  const input = document.getElementById('weekStart');
+  if(input) input.value = k;
+  save();
+  renderDiasHorario();
+  renderASQTable();
+  renderItinerarioResumen();
+  renderSemanas();
+  const label = document.getElementById('horario-semana-label');
+  if(label) label.textContent = fmtLegible(parseISO(k)) + ' — ' + fmtLegible(addDays(parseISO(k),6));
+  renderExtras();
+  if(currentWeek().plan){ renderPlan(); renderCumplimiento(); } else { renderCumplimiento(); }
+}
+function eliminarSemana(k){
+  if(!confirm('¿Eliminar esta semana y todo su horario/plan? Esta acción no se puede deshacer.')) return;
+  delete state.weeks[k];
+  if(state.currentWeekStart===k) state.currentWeekStart = null;
+  save();
+  renderSemanas();
+  if(!state.currentWeekStart){
+    const input = document.getElementById('weekStart');
+    if(input) input.value = '';
+    document.getElementById('dias-horario').innerHTML = '<p class="muted">Selecciona o crea una semana en la pestaña "1 · Semana activa".</p>';
+    const label = document.getElementById('horario-semana-label');
+    if(label) label.textContent = 'ninguna — actívala en la pestaña "1 · Semana activa"';
+  }
+}
+
+function renderDiasHorario(){
+  const cont = document.getElementById('dias-horario');
+  cont.innerHTML = '';
+  const week = currentWeek();
+  if(!week){ cont.innerHTML = '<p class="muted">Selecciona la fecha de inicio de semana (Lunes).</p>'; return; }
+  const start = parseISO(state.currentWeekStart);
+  for(let i=0;i<7;i++){
+    const d = addDays(start,i);
+    const key = fmtDate(d);
+    if(!week.turnos[key]) week.turnos[key] = [];
+    const box = document.createElement('div');
+    box.className='day-card';
+    box.innerHTML = `<div class="day-head"><span>${fmtLegible(d)}</span>
+      <button class="secondary small" onclick="addTurnoRow('${key}')">+ Turno</button></div>
+      <div class="day-body"><table><thead><tr><th>Agente</th><th>Terminal</th><th>Área</th><th>Inicio</th><th>Fin</th><th>Disponible</th><th></th></tr></thead>
+      <tbody id="turnos-${key}"></tbody></table></div>`;
+    cont.appendChild(box);
+    renderTurnosDia(key);
+  }
+  save();
+}
+
+function renderTurnosDia(key){
+  const week = currentWeek();
+  const tb = document.getElementById('turnos-'+key);
+  if(!tb) return;
+  tb.innerHTML = '';
+  week.turnos[key].forEach((t,i)=>{
+    const tr = document.createElement('tr');
+    const rosterOpts = state.roster.map(n=>`<option value="${n}" ${n===t.agente?'selected':''}>${n}</option>`).join('');
+    tr.innerHTML = `
+      <td><select onchange="updTurno('${key}',${i},'agente',this.value)">${rosterOpts}</select></td>
+      <td><select onchange="updTurno('${key}',${i},'terminal',this.value)">
+            <option ${t.terminal==='T1'?'selected':''}>T1</option><option ${t.terminal==='T2'?'selected':''}>T2</option></select></td>
+      <td><input type="text" value="${t.area||''}" onchange="updTurno('${key}',${i},'area',this.value)"></td>
+      <td><input type="time" value="${t.inicio||''}" onchange="updTurno('${key}',${i},'inicio',this.value)"></td>
+      <td><input type="time" value="${t.fin||''}" onchange="updTurno('${key}',${i},'fin',this.value)"></td>
+      <td><input type="checkbox" ${t.disponible!==false?'checked':''} onchange="updTurno('${key}',${i},'disponible',this.checked)"> <span class="muted">${t.motivo?t.motivo:''}</span></td>
+      <td><button class="del-btn small" onclick="delTurno('${key}',${i})">×</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+function addTurnoRow(key){
+  const week = currentWeek();
+  week.turnos[key].push({agente: state.roster[0]||'', terminal:'T1', area:'', inicio:'06:00', fin:'15:00', disponible:true});
+  save(); renderTurnosDia(key);
+}
+function updTurno(key,i,field,val){
+  currentWeek().turnos[key][i][field] = val;
+  save();
+}
+function delTurno(key,i){
+  currentWeek().turnos[key].splice(i,1);
+  save(); renderTurnosDia(key);
+}
+
+// ---------- PARSER: Horario pegado (Planificador EPAC) ----------
+function parsearHorario(){
+  const txt = document.getElementById('pasteHorario').value;
+  if(!txt.trim()){ alert('Pega primero el texto del horario.'); return; }
+  if(!state.currentWeekStart){ alert('Selecciona primero la fecha de inicio de semana.'); return; }
+  const week = currentWeek();
+  const lines = txt.split('\n').map(l=>l.trim()).filter(l=>l.length);
+
+  const mesesLargo = {'enero':1,'febrero':2,'marzo':3,'abril':4,'mayo':5,'junio':6,'julio':7,'agosto':8,'septiembre':9,'octubre':10,'noviembre':11,'diciembre':12};
+  const diaRegex = new RegExp('^(Lunes|Martes|Mi[ée]rcoles|Jueves|Viernes|S[áa]bado|Domingo)\\s+(\\d{1,2})\\s+De\\s+([A-Za-zÁÉÍÓÚáéíóú]+)\\s+De\\s+(\\d{4})', 'i');
+  const horaRegex = /(\d{1,2}:\d{2}\s*[AP]\.M\.)\s*-\s*(\d{1,2}:\d{2}\s*[AP]\.M\.)/i;
+  const rosterOrdenado = state.roster.slice().sort((a,b)=>b.length-a.length);
+
+  let currentKey = null;
+  let currentTerminal = null;
+  let cargados = 0;
+
+  lines.forEach(line=>{
+    const diaMatch = line.match(diaRegex);
+    if(diaMatch){
+      const dd = +diaMatch[2];
+      const mesNombre = diaMatch[3].toLowerCase();
+      const mm = mesesLargo[mesNombre];
+      const yyyy = +diaMatch[4];
+      if(mm){
+        const d = new Date(yyyy, mm-1, dd);
+        currentKey = fmtDate(d);
+        if(!week.turnos[currentKey]) week.turnos[currentKey] = [];
+        currentTerminal = null;
+      }
+      return;
+    }
+    if(/^terminal\s*1/i.test(line)){ currentTerminal='T1'; return; }
+    if(/^terminal\s*2/i.test(line)){ currentTerminal='T2'; return; }
+    if(!currentKey) return;
+
+    // Descanso / Vacaciones / Home Office lines -> mark unavailable if already loaded
+    const noDisp = line.match(/^(Descanso|Vacaciones|Home Office)\s*:\s*(.+)$/i);
+    if(noDisp){
+      const motivo = noDisp[1];
+      const nombres = noDisp[2].split(',').map(s=>s.trim());
+      nombres.forEach(n=>{
+        week.turnos[currentKey].forEach(t=>{ if(t.agente===n){ t.disponible=false; t.motivo=motivo; } });
+      });
+      return;
+    }
+    if(/^cga\s*:/i.test(line)) return; // informativo, no genera turno
+
+    if(!currentTerminal) return;
+    const horaMatch = line.match(horaRegex);
+    if(!horaMatch) return;
+
+    const nombre = rosterOrdenado.find(n => line.indexOf(n)===0 || line.indexOf(n)===1);
+    if(!nombre) return;
+
+    const before = line.slice(line.indexOf(nombre)+nombre.length, line.indexOf(horaMatch[0]));
+    const area = before.replace(/\s+/g,' ').trim();
+
+    const to24 = (s)=>{
+      s = s.replace(/\s+/g,'').toUpperCase();
+      const m = s.match(/(\d{1,2}):(\d{2})([AP])\.?M\.?/);
+      if(!m) return '';
+      let h = +m[1]; const min=m[2]; const ap=m[3];
+      if(ap==='P' && h!==12) h+=12;
+      if(ap==='A' && h===12) h=0;
+      return String(h).padStart(2,'0')+':'+min;
+    };
+
+    week.turnos[currentKey].push({
+      agente: nombre, terminal: currentTerminal, area: area,
+      inicio: to24(horaMatch[1]), fin: to24(horaMatch[2]), disponible:true
+    });
+    cargados++;
+  });
+
+  save();
+  renderDiasHorario();
+  alert(`Se cargaron ${cargados} turnos. Revisa la tabla por día y marca disponibilidad si algo no se detectó bien.`);
+}
+
+// ---------- ASQ ----------
+function renderASQTable(){
+  const tb = document.querySelector('#tabla-asq tbody');
+  tb.innerHTML = '';
+  const start = state.currentWeekStart ? parseISO(state.currentWeekStart) : null;
+  const end = start ? addDays(start,6) : null;
+  state.asqAll.forEach((r,i)=>{
+    const d = parseISO(r.fecha);
+    const enSemana = start && d>=start && d<=end;
+    const tr = document.createElement('tr');
+    if(enSemana) tr.style.background = '#F1EEF6';
+    tr.innerHTML = `
+      <td><input type="date" value="${r.fecha}" onchange="updASQ(${i},'fecha',this.value)"></td>
+      <td><input type="time" value="${r.hora}" onchange="updASQ(${i},'hora',this.value)"></td>
+      <td><input type="text" value="${r.destino}" onchange="updASQ(${i},'destino',this.value)"></td>
+      <td><input type="text" value="${r.vuelo}" onchange="updASQ(${i},'vuelo',this.value)"></td>
+      <td><input type="text" value="${r.aerolinea}" onchange="updASQ(${i},'aerolinea',this.value)"></td>
+      <td><input type="number" value="${r.cantidad}" onchange="updASQ(${i},'cantidad',+this.value)"></td>
+      <td><button class="del-btn small" onclick="delASQ(${i})">×</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+function addASQRow(){
+  state.asqAll.push({fecha: state.currentWeekStart || fmtDate(new Date()), hora:'12:00', destino:'', vuelo:'', aerolinea:'', cantidad:1});
+  save(); renderASQTable();
+}
+function updASQ(i,field,val){ state.asqAll[i][field]=val; save(); }
+function delASQ(i){ state.asqAll.splice(i,1); save(); renderASQTable(); }
+
+function parsearASQ(){
+  const txt = document.getElementById('pasteASQ').value;
+  if(!txt.trim()){ alert('Pega primero las filas de la lista ASQ.'); return; }
+  const lines = txt.split('\n').map(l=>l.trim()).filter(l=>l.length);
+  const re = /^([A-Z]{3})\s+(Q\d)\s+(\d{2})\/(\d{2})\/(\d{4})\s+(\S+)\s+(\S+)\s+(\S+)\s+(\d{1,2}:\d{2})\s+(\S+)\s+(\d+)\s*$/i;
+  const nuevas = [];
+  lines.forEach(line=>{
+    const m = line.match(re);
+    if(!m) return;
+    const [, aero, periodo, dd, mm, yyyy, dia, destino, vuelo, hora, aerolinea, cantidad] = m;
+    const fecha = `${yyyy}-${mm}-${dd}`;
+    const horaPad = hora.replace(/^(\d):/, '0$1:');
+    nuevas.push({fecha, hora:horaPad, destino, vuelo, aerolinea, cantidad:+cantidad});
+  });
+  if(nuevas.length===0){ alert('No se reconoció ninguna fila con el formato esperado.'); return; }
+  const mesesNuevos = new Set(nuevas.map(n=>n.fecha.slice(0,7)));
+  state.asqAll = state.asqAll.filter(r=> !mesesNuevos.has(r.fecha.slice(0,7)));
+  state.asqAll = state.asqAll.concat(nuevas);
+  save();
+  renderASQTable();
+  alert(`Se cargaron ${nuevas.length} vuelos ASQ. Se reemplazó lo que ya tenías de: ${[...mesesNuevos].join(', ')} (otros meses guardados no se tocan).`);
+}
+
+// ---------- ARCHIVOS: PDF / HTML / TXT -> textarea ----------
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+async function extraerTextoPDF(arrayBuffer){
+  const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  let textoCompleto = '';
+  for(let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const items = content.items.map(it=>({str:it.str, x:it.transform[4], y:Math.round(it.transform[5]), w:it.width||0}));
+    items.sort((a,b)=> b.y-a.y || a.x-b.x);
+    const lineas = [];
+    let curY = null, curLine = [];
+    items.forEach(it=>{
+      if(curY===null || Math.abs(it.y-curY)>3){
+        if(curLine.length) lineas.push(curLine);
+        curLine = [it]; curY = it.y;
+      } else {
+        curLine.push(it);
+      }
+    });
+    if(curLine.length) lineas.push(curLine);
+    lineas.forEach(linea=>{
+      linea.sort((a,b)=>a.x-b.x);
+      let texto = ''; let lastEnd = null;
+      linea.forEach(it=>{
+        if(lastEnd!==null && (it.x-lastEnd) > 1.5) texto += ' ';
+        texto += it.str;
+        lastEnd = it.x + it.w;
+      });
+      textoCompleto += texto + '\n';
+    });
+  }
+  return textoCompleto;
+}
+async function manejarArchivo(file, textareaId){
+  const ext = (file.name.split('.').pop()||'').toLowerCase();
+  const ta = document.getElementById(textareaId);
+  try{
+    if(ext==='pdf'){
+      ta.value = 'Leyendo PDF…';
+      const buf = await file.arrayBuffer();
+      const timeout = new Promise((_,rej)=> setTimeout(()=>rej(new Error('timeout')), 20000));
+      const texto = await Promise.race([extraerTextoPDF(buf), timeout]);
+      if(!texto.trim()){
+        ta.value = '';
+        alert('Este PDF no tiene texto que se pueda leer (probablemente es una foto o captura de pantalla convertida a PDF, no un PDF generado por el sistema). No se puede extraer nada de un archivo así. Usa el PDF original del sistema, o pega/escribe el contenido manualmente.');
+        return;
+      }
+      ta.value = texto;
+    } else if(ext==='html' || ext==='htm'){
+      const texto = await file.text();
+      const doc = new DOMParser().parseFromString(texto, 'text/html');
+      ta.value = doc.body ? doc.body.innerText : texto;
+    } else {
+      ta.value = await file.text();
+    }
+  }catch(err){
+    alert('No se pudo leer el archivo. Si es un PDF escaneado (imagen) o protegido, no se puede extraer texto; intenta con .txt o pega el contenido manualmente.');
+  }
+}
+function setupDropzone(zoneId, inputId, textareaId){
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  if(!zone || !input) return;
+  zone.addEventListener('click', ()=> input.click());
+  input.addEventListener('change', e=>{ if(e.target.files[0]) manejarArchivo(e.target.files[0], textareaId); });
+  ['dragover','dragenter'].forEach(evt=> zone.addEventListener(evt, e=>{ e.preventDefault(); zone.classList.add('dragover'); }));
+  ['dragleave','dragend'].forEach(evt=> zone.addEventListener(evt, ()=> zone.classList.remove('dragover')));
+  zone.addEventListener('drop', e=>{
+    e.preventDefault(); zone.classList.remove('dragover');
+    if(e.dataTransfer.files[0]) manejarArchivo(e.dataTransfer.files[0], textareaId);
+  });
+}
+
+// ---------- ITINERARIO MENSUAL ----------
+function cargarItinerario(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const dayRe = /^(\d{1,2})_(\d{1,2})_(\d{4})$/;
+      const eventos = [];
+      const pad2Hora = (s)=>{
+        const m = String(s).trim().match(/^(\d{1,2}):(\d{2})$/);
+        return m ? (m[1].padStart(2,'0')+':'+m[2]) : String(s).trim();
+      };
+      wb.SheetNames.forEach(name=>{
+        const m = name.match(dayRe);
+        if(!m) return;
+        const dd = +m[1], mm = +m[2], yyyy = +m[3];
+        const fecha = `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+        const ws = wb.Sheets[name];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false});
+        rows.forEach(r=>{
+          if(!r || r.length<8) return;
+          const num = r[0], aero = r[1], vLl = r[2], vSa = r[3], hLl = r[4], hSa = r[5], origen = r[6], destino = r[7];
+          if(num===undefined || num===null || isNaN(+num)) return;
+          if(!aero || !/^[A-Z0-9]{2,4}$/i.test(String(aero).trim())) return;
+          if(hLl && /^\d{1,2}:\d{2}$/.test(String(hLl).trim())){
+            eventos.push({fecha, hora:pad2Hora(hLl), tipo:'Llegada', aerolinea:String(aero).trim().toUpperCase(), vuelo:String(vLl||'').trim(), lugar:String(origen||'').trim()});
+          }
+          if(hSa && /^\d{1,2}:\d{2}$/.test(String(hSa).trim())){
+            eventos.push({fecha, hora:pad2Hora(hSa), tipo:'Salida', aerolinea:String(aero).trim().toUpperCase(), vuelo:String(vSa||'').trim(), lugar:String(destino||'').trim()});
+          }
+        });
+      });
+      if(eventos.length===0){
+        alert('No se reconoció ningún vuelo en el archivo. Verifica que sea el itinerario diario en formato .xlsx.');
+        return;
+      }
+      const mesesNuevos = new Set(eventos.map(e=>e.fecha.slice(0,7)));
+      state.itinerarioMensual = state.itinerarioMensual.filter(e=> !mesesNuevos.has(e.fecha.slice(0,7)));
+      state.itinerarioMensual = state.itinerarioMensual.concat(eventos);
+      save();
+      renderItinerarioResumen();
+      alert(`Se cargaron ${eventos.length} eventos de vuelo (llegadas + salidas). Se reemplazó lo que ya tenías de: ${[...mesesNuevos].join(', ')} (otros meses guardados no se tocan).`);
+    }catch(err){
+      alert('No se pudo leer el archivo. Verifica que sea el itinerario diario en formato .xlsx.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderItinerarioResumen(){
+  const totalTxt = document.getElementById('itinerario-total');
+  const el = document.getElementById('itinerario-resumen');
+  if(!totalTxt || !el) return;
+  totalTxt.textContent = state.itinerarioMensual.length
+    ? `${state.itinerarioMensual.length} eventos de vuelo cargados en total (todo el mes).`
+    : 'Aún no se ha cargado el itinerario mensual. Mientras tanto, las Comment Cards se reparten por día (sin vuelo específico).';
+  if(!state.currentWeekStart){ el.innerHTML = ''; return; }
+  const start = parseISO(state.currentWeekStart);
+  const startKey = fmtDate(start), endKey = fmtDate(addDays(start,6));
+  const semana = state.itinerarioMensual.filter(e=> e.fecha>=startKey && e.fecha<=endKey);
+  if(semana.length===0){ el.innerHTML = '<p class="muted">Sin vuelos cargados para la semana activa.</p>'; return; }
+  const porAerolinea = {};
+  semana.forEach(e=>{
+    if(!porAerolinea[e.aerolinea]) porAerolinea[e.aerolinea] = {ll:0, sa:0};
+    if(e.tipo==='Llegada') porAerolinea[e.aerolinea].ll++; else porAerolinea[e.aerolinea].sa++;
+  });
+  let html = `<p class="muted">${semana.length} eventos de vuelo en la semana activa.</p><table><thead><tr><th>Aerolínea</th><th>Llegadas</th><th>Salidas</th></tr></thead><tbody>`;
+  Object.keys(porAerolinea).sort().forEach(k=>{
+    html += `<tr><td>${k}</td><td>${porAerolinea[k].ll}</td><td>${porAerolinea[k].sa}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function generarPlanSinASQ(){
+  if(!state.currentWeekStart){ alert('Selecciona primero la semana en la pestaña "1 · Semana activa".'); return; }
+  if(!confirm('Vas a generar el plan de esta semana solo con Comment Cards y Específicas, sin encuestas ASQ (aún no tienes la asignación mensual cargada). Cuando la tengas, cárgala y vuelve a generar el plan. ¿Continuar?')) return;
+  generarPlan();
+}
+
+// ---------- PLAN GENERATION ----------
+function generarPlan(){
+  if(!state.currentWeekStart){ alert('Selecciona primero la semana en la pestaña 2.'); return; }
+  const week = currentWeek();
+  const start = parseISO(state.currentWeekStart);
+  const dias = [];
+  for(let i=0;i<7;i++) dias.push(addDays(start,i));
+
+  const riesgos = [];
+
+  function claveTarea(tipo, fecha, agente, item){
+    if(tipo==='asq') return `asq|${fecha}|${item.vuelo}|${item.hora}|${item.aerolinea}`;
+    if(tipo==='cc') return `cc|${fecha}|${agente}|${item.aerolinea}|${item.tipo}|${item.vuelo||''}|${item.hora||''}`;
+    return `ee|${fecha}|${agente}|${item.categoria}`;
+  }
+  const cumplimientoPrevio = {};
+  if(week.plan && week.plan.asignacionPorDia){
+    Object.keys(week.plan.asignacionPorDia).forEach(fecha=>{
+      const agentes = week.plan.asignacionPorDia[fecha].agentes;
+      Object.keys(agentes).forEach(agente=>{
+        const ag = agentes[agente];
+        ['asq','cc','ee'].forEach(tipo=>{
+          (ag[tipo]||[]).forEach(it=>{
+            cumplimientoPrevio[claveTarea(tipo,fecha,agente,it)] = {realizado: !!it.realizado, comentarios: it.comentarios||'', contabilizado: !!it.contabilizado};
+          });
+        });
+      });
+    });
+  }
+
+  // --- 1. ASQ assignment ---
+  const asignacionPorDia = {}; // key -> { agentes: {nombre: {asq:[], cc:[], ee:[]}} }
+  dias.forEach(d=>{
+    const key = fmtDate(d);
+    asignacionPorDia[key] = { agentes: {} };
+    (week.turnos[key]||[]).forEach(t=>{
+      if(!asignacionPorDia[key].agentes[t.agente]) asignacionPorDia[key].agentes[t.agente] = {asq:[], cc:[], ee:[], turno:t};
+    });
+  });
+
+  // Carga compartida por agente y día (ASQ + CC atadas a vuelo se balancean juntas)
+  const cargaPorDia = {};
+  dias.forEach(d=>{ cargaPorDia[fmtDate(d)] = {}; });
+ 
+  const vuelosPorDia = {};
+dias.forEach(d=>{
+  vuelosPorDia[fmtDate(d)] = {};
+});
+
+const ventanaHoras = state.ventanaHorasAntes||0;
+  function restarHoras(horaStr, horas){
+    const [h,m] = horaStr.split(':').map(Number);
+    let totalMin = h*60 + m - Math.round(horas*60);
+    if(totalMin < 0) totalMin = 0;
+    const hh = Math.floor(totalMin/60), mm = totalMin%60;
+    return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  }
+  function agenteExcluido(nombre){
+    return (state.agentesExcluidos||[]).map(n=>n.trim().toLowerCase()).includes((nombre||'').trim().toLowerCase());
+  }
+  function turnosDisponiblesEnHora(key, hora){
+    const desde = restarHoras(hora, ventanaHoras);
+    return (week.turnos[key]||[]).filter(t=> t.disponible!==false && !agenteExcluido(t.agente) && t.inicio && t.fin && t.inicio<=hora && t.fin>=desde);
+  }
+  function elegirAgente(key, hora){
+    const candidatos = turnosDisponiblesEnHora(key, hora)
+  .filter(t =>
+  agentePuedeASQ(t.agente) &&
+  !esCoordinador(t) &&
+  ((vuelosPorDia[key][t.agente] || 0) < 3)
+);
+
+    if(candidatos.length===0) return null;
+    candidatos.sort((a,b)=> (cargaPorDia[key][a.agente]||0) - (cargaPorDia[key][b.agente]||0));
+    return candidatos[0].agente;
+  }
+  function registrarCarga(key, agente, cantidad){
+    cargaPorDia[key][agente] = (cargaPorDia[key][agente]||0) + cantidad;
+  }
+  function registrarVuelo(key, agente){
+  vuelosPorDia[key][agente] =
+    (vuelosPorDia[key][agente] || 0) + 1;
+}
+  function esCoordinador(turno){
+  const area = (turno.area || '').toLowerCase();
+
+  return area.includes('coordinador')
+      || area.includes('coord')
+      || area.includes('cga');
+}
+
+function terminalEsperada(aerolinea){
+  const internacionales = [
+    'AA',
+    'UA',
+    'AS',
+    'DL',
+    'WN',
+    'WS',
+    'B6'
+  ];
+
+  return internacionales.includes(
+    (aerolinea || '').toUpperCase()
+  )
+    ? 'T2'
+    : 'T1';
+}
+
+function elegirAgenteTerminal(key, hora, terminal){
+  const candidatos = turnosDisponiblesEnHora(key, hora)
+    .filter(t =>
+      t.terminal === terminal &&
+      agentePuedeASQ(t.agente) &&
+      !esCoordinador(t) &&
+      ((vuelosPorDia[key][t.agente] || 0) < 3)
+    );
+
+  if(candidatos.length === 0){
+    return null;
+  }
+
+  candidatos.sort((a,b)=>
+    (cargaPorDia[key][a.agente] || 0) -
+    (cargaPorDia[key][b.agente] || 0)
+  );
+  
+return candidatos[0].agente;
+}
+function agenteMenosCargado(key){
+  const disponibles =
+    Object.keys(asignacionPorDia[key].agentes)
+    .filter(a=>{
+      const t =
+        asignacionPorDia[key]
+        .agentes[a]
+        .turno;
+
+      return (
+        t &&
+        t.disponible !== false &&
+        !agenteExcluido(a) &&
+        !esCoordinador(t)
+      );
+    });
+
+  if(disponibles.length===0){
+    return null;
+  }
+
+  disponibles.sort((a,b)=>
+    (cargaPorDia[key][a]||0) -
+    (cargaPorDia[key][b]||0)
+  );
+
+  return disponibles[0];
+}
+
+dias.forEach(d=>{
+    const key = fmtDate(d);
+
+    const vuelosDia = state.asqAll.filter(v=>v.fecha===key).sort((a,b)=>a.hora.localeCompare(b.hora));
+    vuelosDia.forEach(v=>{
+      const elegido =
+  elegirAgenteTerminal(
+    key,
+    v.hora,
+    terminalEsperada(v.aerolinea)
+  );
+      if(!elegido){
+        riesgos.push(`Sin cobertura ASQ: ${key} ${v.hora} vuelo ${v.vuelo} (${v.destino}) — ningún turno cubre ese horario, ni siquiera considerando ${ventanaHoras}h antes.`);
+        return;
+      }
+            registrarCarga(key, elegido, v.cantidad);
+registrarVuelo(key, elegido);
+asignacionPorDia[key].agentes[elegido].asq.push(v);
+          });
+      });    
+  
+  // --- 2. CC / EE weekly targets from remaining monthly quota ---
+  const semanas = Math.max(1, state.semanasRestantes||1);
+  const pisoPct = (state.pisoPct||0)/100;
+
+  const cuotaLote = Math.max(1, state.cuotaPorVuelo||5);
+  function targetSemanalEnLotes(remaining, semanasRest){
+    if(remaining<=0) return 0;
+    if(semanasRest<=1) return remaining; // última semana: hay que cerrar lo que falte, aunque no sea múltiplo de 5
+    const lotesTotales = Math.floor(remaining/cuotaLote);
+    if(lotesTotales<=0) return 0; // no alcanza ni para un lote completo esta semana; se difiere
+    const lotesSemana = Math.max(0, Math.round(lotesTotales/semanasRest));
+    return lotesSemana*cuotaLote;
+  }
+  const ccTargets = state.ccQuota.map(r=>{
+    const remLl = Math.max(0, r.llegada - r.avanceLlegada);
+    const remSa = Math.max(0, r.salida - r.avanceSalida);
+    const targetLl = targetSemanalEnLotes(remLl, semanas);
+    const targetSa = targetSemanalEnLotes(remSa, semanas);
+    const pisoLl = Math.ceil(r.llegada*pisoPct);
+    const pisoSa = Math.ceil(r.salida*pisoPct);
+    return {...r, targetLl, targetSa, pisoLl, pisoSa};
+  });
+  const eeTargets = state.eeQuota.map(r=>{
+    const rem = Math.max(0, r.cuota - r.avance);
+    const target = Math.min(rem, Math.ceil(rem/semanas));
+    const piso = Math.ceil(r.cuota*pisoPct);
+    return {...r, target, piso};
+  });
+
+  // Distribute a weekly quantity evenly across the 7 days (used as fallback / for EE / margin)
+  function repartir(total, dias){
+    const base = Math.floor(total/dias.length);
+    let resto = total - base*dias.length;
+    const out = dias.map(()=>base);
+    for(let i=0;i<out.length && resto>0;i++){ out[i]++; resto--; }
+    return out;
+  }
+
+  const startKey = fmtDate(start), endKey = fmtDate(addDays(start,6));
+  function eventosSemana(tipo, code){
+    return state.itinerarioMensual
+      .filter(e=> e.tipo===tipo && (e.aerolinea||'').toUpperCase()===(code||'').toUpperCase() && e.fecha>=startKey && e.fecha<=endKey)
+      .sort((a,b)=> (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  }
+  function seleccionarSubconjunto(eventos, n){
+    if(n>=eventos.length) return eventos.slice();
+    const out = []; const step = eventos.length/n;
+    for(let i=0;i<n;i++) out.push(eventos[Math.floor(i*step)]);
+    return out;
+  }
+  function distribuirGenericoCC(r, tipo, cantidad, nota){
+    if(cantidad<=0) return;
+    const cuota = Math.max(1, state.cuotaPorVuelo||5);
+    const cuotaMin = Math.min(2, cuota);
+    let restante = cantidad;
+    while(restante>0){
+      let cant = Math.min(cuota, restante);
+      if(restante - cant > 0 && restante - cant < cuotaMin) cant = restante; // no dejar un bloque final menor al mínimo
+      // día con menor carga total entre los que sí tienen personal disponible, para repartir parejo de verdad
+      let mejorDia = null, mejorAgente = null, mejorCarga = Infinity;
+      dias.forEach(d=>{
+        const key = fmtDate(d);
+        const ag = agenteMenosCargado(key);
+        if(!ag) return;
+        const carga = cargaPorDia[key][ag]||0;
+        if(carga < mejorCarga){ mejorCarga = carga; mejorDia = key; mejorAgente = ag; }
+      });
+      if(!mejorDia){
+        riesgos.push(`CC ${r.name} (${tipo}${nota||''}): no hay personal disponible ningún día de la semana para repartir ${restante} encuesta(s) restante(s).`);
+        return;
+      }
+      registrarCarga(mejorDia, mejorAgente, cant);
+      asignacionPorDia[mejorDia].agentes[mejorAgente].cc.push({aerolinea:r.name, tipo:tipo+(nota||''), cantidad:cant});
+      restante -= cant;
+    }
+  }
+  function distribuirEnVuelos(targetQty, eventos){
+    // Reparte apuntando a "cuotaPorVuelo" por vuelo, pero NUNCA deja un vuelo con
+    // menos de cuotaMin encuestas (evita vuelos de 1 sola encuesta). Si el remanente
+    // final quedaría por debajo del mínimo, se fusiona con el último vuelo ya asignado
+    // (hasta el máximo absoluto); si eso tampoco alcanza, ese remanente se regresa
+    // como excedente (cae a reparto genérico / sin vuelo especificado).
+    const cuota = Math.max(1, state.cuotaPorVuelo||5);
+    const cuotaMax = Math.max(cuota, state.cuotaPorVueloMax||5);
+    const cuotaMin = Math.min(2, cuota);
+    if(targetQty < cuotaMin){
+      return {asignaciones:[], excedente: targetQty};
+    }
+    const asignaciones = [];
+    let restante = targetQty;
+    let idx = 0;
+    while(restante > 0 && idx < eventos.length){
+      const quedanVuelos = eventos.length - idx;
+      let cant;
+      if(restante <= cuotaMax){
+        cant = restante; // ya cabe todo en este último vuelo, ciérralo aquí
+      } else if(quedanVuelos===1){
+        cant = Math.min(restante, cuotaMax);
+      } else if(restante - cuota < cuotaMin){
+        // si tomo la cuota estándar, el remanente quedaría por debajo del mínimo:
+        // este vuelo absorbe también ese remanente (sin pasar el máximo)
+        cant = Math.min(cuotaMax, restante);
+      } else {
+        cant = cuota;
+      }
+      asignaciones.push({evento: eventos[idx], cantidad: cant});
+      restante -= cant;
+      idx++;
+    }
+    return {asignaciones, excedente: restante};
+  }
+  const hayASQEstaSemana = state.asqAll.some(v=> v.fecha>=startKey && v.fecha<=endKey);
+  const MAX_VUELOS_DIA_CC = hayASQEstaSemana
+    ? Math.max(1, state.maxVuelosPorDiaCC||3)
+    : Math.max(1, state.maxVuelosPorDiaCCSinASQ||5);
+  const vuelosCCPorDia = {};
+  dias.forEach(d=>{ vuelosCCPorDia[fmtDate(d)] = 0; });
+
+  function asignarCCTipo(r, tipo, targetQty){
+    if(targetQty<=0) return;
+    let eventos = eventosSemana(tipo, r.code);
+    eventos = eventos.filter(e=> (vuelosCCPorDia[e.fecha]||0) < MAX_VUELOS_DIA_CC);
+    if(eventos.length===0){
+      if(state.itinerarioMensual.length>0){
+        riesgos.push(`CC ${r.name} (${tipo}): sin vuelos disponibles esta semana (o ya se alcanzó el máximo de ${MAX_VUELOS_DIA_CC} vuelos con CC por día); se repartió por día sin vuelo específico.`);
+      }
+      distribuirGenericoCC(r, tipo, targetQty);
+      return;
+    }
+    const cuota = Math.max(1, state.cuotaPorVuelo||5);
+    const nEventos = Math.min(eventos.length, Math.ceil(targetQty/cuota));
+    const elegidos = seleccionarSubconjunto(eventos, nEventos);
+    const {asignaciones, excedente} = distribuirEnVuelos(targetQty, elegidos);
+    let sinCobertura = 0;
+    asignaciones.forEach(({evento:ev, cantidad:cant})=>{
+      if(cant<=0) return;
+      const key = ev.fecha;
+      const elegido = elegirAgente(key, ev.hora);
+      if(!elegido){
+        sinCobertura += cant;
+        riesgos.push(`CC ${r.name} (${tipo}): sin turno que cubra el vuelo ${ev.vuelo} (${key} ${ev.hora}, considerando ${ventanaHoras}h antes).`);
+        return;
+      }
+      registrarCarga(key, elegido, cant);
+registrarVuelo(key, elegido);
+
+      vuelosCCPorDia[key] = (vuelosCCPorDia[key]||0) + 1;
+      asignacionPorDia[key].agentes[elegido].cc.push({aerolinea:r.name, tipo, cantidad:cant, vuelo:ev.vuelo, hora:ev.hora, lugar:ev.lugar});
+    });
+    sinCobertura += excedente;
+    if(sinCobertura>0) distribuirGenericoCC(r, tipo, sinCobertura, ' (excedente sin cobertura de vuelo)');
+  }
+
+  ccTargets.forEach(r=>{
+    asignarCCTipo(r, 'Llegada', r.targetLl);
+    asignarCCTipo(r, 'Salida', r.targetSa);
+  });
+
+  // --- 3. Margen extra EE (libre, no ligado a categoría) — se reparte junto con las EE normales.
+  const margenSemanalCC = Math.ceil((state.margenCC||0)/semanas);
+  const margenSemanalEE = Math.ceil((state.margenEE||0)/semanas);
+  if(margenSemanalEE>0){
+    eeTargets.push({name:'Margen (libre, cualquier categoría)', target: margenSemanalEE, cuota:0, avance:0, piso:0});
+  }
+
+  // EE en bloques de "cuotaPorVuelo" (misma cuota que CC), con tope de bloques ("vuelos") por día
+  const cuotaEE = Math.max(1, state.cuotaPorVuelo||5);
+  const cuotaMinEE = Math.min(2, cuotaEE);
+  const MAX_BLOQUES_EE_DIA = Math.max(1, state.maxVuelosPorDiaEE||2);
+  const bloquesEEPorDia = {};
+  dias.forEach(d=>{ bloquesEEPorDia[fmtDate(d)] = 0; });
+
+  function asignarEE(r, targetQty){
+    if(targetQty<=0) return;
+    let restante = targetQty;
+    while(restante>0){
+      let cant = Math.min(cuotaEE, restante);
+      if(restante - cant > 0 && restante - cant < cuotaMinEE) cant = restante;
+      let mejorDia = null, mejorAgente = null, mejorCarga = Infinity;
+      dias.forEach(d=>{
+        const key = fmtDate(d);
+        if((bloquesEEPorDia[key]||0) >= MAX_BLOQUES_EE_DIA) return;
+        const ag = agenteMenosCargado(key);
+        if(!ag) return;
+        const carga = cargaPorDia[key][ag]||0;
+        if(carga < mejorCarga){ mejorCarga = carga; mejorDia = key; mejorAgente = ag; }
+      });
+      if(!mejorDia){
+        riesgos.push(`EE ${r.name}: quedaron ${restante} encuesta(s) sin repartir esta semana (máximo de ${MAX_BLOQUES_EE_DIA} vuelos de EE por día alcanzado, o sin personal disponible).`);
+        return;
+      }
+      registrarCarga(mejorDia, mejorAgente, cant);
+      bloquesEEPorDia[mejorDia] = (bloquesEEPorDia[mejorDia]||0) + 1;
+      asignacionPorDia[mejorDia].agentes[mejorAgente].ee.push({categoria:r.name, cantidad:cant});
+      restante -= cant;
+    }
+  }
+  eeTargets.forEach(r=> asignarEE(r, r.target));
+
+  function repartirMargen(total, tipo){
+    if(total<=0) return;
+    const cuota = Math.max(1, state.cuotaPorVuelo||5);
+    const cuotaMin = Math.min(2, cuota);
+    let restante = total;
+    while(restante>0){
+      let cant = Math.min(cuota, restante);
+      if(restante - cant > 0 && restante - cant < cuotaMin) cant = restante;
+      let mejorDia = null, mejorAgente = null, mejorCarga = Infinity;
+      dias.forEach(d=>{
+        const key = fmtDate(d);
+        const ag = agenteMenosCargado(key);
+        if(!ag) return;
+        const carga = cargaPorDia[key][ag]||0;
+        if(carga < mejorCarga){ mejorCarga = carga; mejorDia = key; mejorAgente = ag; }
+      });
+      if(!mejorDia){
+        riesgos.push(`Margen CC: no hay personal disponible ningún día de la semana para repartir ${restante} encuesta(s) restante(s) de margen.`);
+        return;
+      }
+      registrarCarga(mejorDia, mejorAgente, cant);
+      asignacionPorDia[mejorDia].agentes[mejorAgente].cc.push({aerolinea:'Margen (libre, cualquier aerolínea)', tipo:'Llegada o Salida', cantidad:cant});
+      restante -= cant;
+    }
+  }
+  repartirMargen(margenSemanalCC, 'cc');
+
+  Object.keys(asignacionPorDia).forEach(fecha=>{
+    Object.keys(asignacionPorDia[fecha].agentes).forEach(agente=>{
+      const ag = asignacionPorDia[fecha].agentes[agente];
+      ['asq','cc','ee'].forEach(tipo=>{
+        ag[tipo].forEach(it=>{
+          const prev = cumplimientoPrevio[claveTarea(tipo, fecha, agente, it)];
+          normalizarTarea(it);
+          
+          if(prev){
+
+  it.estado =
+    prev.estado || 'pendiente';
+
+  it.planeadas =
+    prev.planeadas !== undefined
+      ? prev.planeadas
+      : it.cantidad;
+
+  it.realizadas =
+    prev.realizadas !== undefined
+      ? prev.realizadas
+      : 0;
+
+  it.comentarios =
+    prev.comentarios || '';
+
+  it.contabilizado =
+    !!prev.contabilizado;
+
+}else{
+
+  it.estado = 'pendiente';
+
+  it.planeadas = it.cantidad;
+
+  it.realizadas = 0;
+
+  it.comentarios = '';
+
+  it.contabilizado = false;
+
+}
+        });
+      });
+    });
+  });
+
+  week.plan = { generadoEn: new Date().toISOString(), asignacionPorDia, ccTargets, eeTargets, riesgos, margenSemanalCC, margenSemanalEE };
+  save();
+  renderPlan();
+  renderCumplimiento();
+  document.querySelector('[data-tab="plan"]').click();
+}
+
+function fmtFechaCorta(f){
+  const d = parseISO(f);
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+let ccEditRefs = [];
+let eeEditRefs = [];
+
+function editarCC(refIdx, campo, valor){
+  const ref = ccEditRefs[refIdx];
+  if(!ref) return;
+  const week = currentWeek();
+  if(!week || !week.plan) return;
+  const dia = week.plan.asignacionPorDia[ref.fecha];
+  if(!dia) return;
+  const ag = dia.agentes[ref.agente];
+  if(!ag || !ag.cc[ref.idx]) return;
+  ag.cc[ref.idx][campo] = valor;
+  if(campo === 'cantidad'){
+  ag.cc[ref.idx].planeadas = valor;
+}
+  save();
+}
+
+function editarEE(refIdx, campo, valor){
+  const ref = eeEditRefs[refIdx];
+  if(!ref) return;
+  const week = currentWeek();
+  if(!week || !week.plan) return;
+  const dia = week.plan.asignacionPorDia[ref.fecha];
+  if(!dia) return;
+  const ag = dia.agentes[ref.agente];
+  if(!ag || !ag.ee[ref.idx]) return;
+  ag.ee[ref.idx][campo] = valor;
+  if(campo === 'cantidad'){
+  ag.ee[ref.idx].planeadas = valor;
+}
+  save();
+  
+}
+
+  function cambiarAgente(fecha, tipo, agenteActual, idx, nuevoAgente){
+  const week = currentWeek();
+
+  if(!week || !week.plan) return;
+
+  const dia = week.plan.asignacionPorDia[fecha];
+  if(!dia) return;
+
+  const origen = dia.agentes[agenteActual];
+  const destino = dia.agentes[nuevoAgente];
+
+  if(!origen || !destino) return;
+
+  const tarea = origen[tipo][idx];
+
+  destino[tipo].push(tarea);
+  origen[tipo].splice(idx,1);
+
+  save();
+  renderPlan();
+}
+function editarASQ(fecha, agente, idx, valor){
+  const week = currentWeek();
+
+  if(!week || !week.plan) return;
+
+  const tarea =
+    week.plan.asignacionPorDia[fecha]
+      .agentes[agente]
+      .asq[idx];
+
+  if(!tarea) return;
+
+  tarea.cantidad = valor;
+  tarea.planeadas = valor;
+
+  save();
+}
+
+function renderPlan(){
+  const week = currentWeek();
+  const kpisEl = document.getElementById('kpis');
+  const riesgosEl = document.getElementById('riesgos');
+  const diasEl = document.getElementById('plan-dias');
+  if(!week || !week.plan){ kpisEl.innerHTML=''; riesgosEl.innerHTML=''; diasEl.innerHTML = '<p class="muted">Aún no generas el plan de esta semana.</p>'; return; }
+
+  const plan = week.plan;
+  const totalASQ = plan.ccTargets ? Object.values(plan.asignacionPorDia).reduce((acc,d)=>acc+Object.values(d.agentes).reduce((a2,ag)=>a2+ag.asq.reduce((s,v)=>s+v.cantidad,0),0),0) : 0;
+  const totalCC = plan.ccTargets.reduce((s,r)=>s+r.targetLl+r.targetSa,0) + (plan.margenSemanalCC||0);
+  const totalEE = plan.eeTargets.reduce((s,r)=>s+r.target,0);
+
+  kpisEl.innerHTML = `<div class="kpi-grid">
+    <div class="kpi"><div class="n">${totalASQ}</div><div class="l">Encuestas ASQ asignadas</div></div>
+    <div class="kpi"><div class="n">${totalCC}</div><div class="l">Comment Cards planeadas (incluye margen ${plan.margenSemanalCC||0})</div></div>
+    <div class="kpi"><div class="n">${totalEE}</div><div class="l">Específicas planeadas (incluye margen ${plan.margenSemanalEE||0})</div></div>
+    <div class="kpi"><div class="n">${plan.riesgos.length}</div><div class="l">Riesgos detectados</div></div>
+  </div>`;
+
+  if(plan.riesgos.length){
+    riesgosEl.innerHTML = `<div class="risk-box"><strong>Riesgos a revisar</strong><ul>${plan.riesgos.map(r=>`<li>${r}</li>`).join('')}</ul></div>`;
+  } else {
+    riesgosEl.innerHTML = '';
+  }
+
+  // Aplanar la asignación por día/agente en 3 conjuntos de filas: ASQ, CC, EE
+  const asqRows = [], ccRows = [], eeRows = [];
+  ccEditRefs = [];
+  eeEditRefs = [];
+  Object.keys(plan.asignacionPorDia).sort().forEach(fecha=>{
+    const dia = diaSemanaLabel(parseISO(fecha));
+    const agentes = plan.asignacionPorDia[fecha].agentes;
+    Object.keys(agentes).forEach(nombre=>{
+      const ag = agentes[nombre];
+      ag.asq.forEach((v,idx) =>
+  asqRows.push({
+    fecha,
+    dia,
+    aerolinea:v.aerolinea||'',
+    vuelo:v.vuelo||'',
+    destino:v.destino||'',
+    hora:v.hora||'',
+    cantidad:v.cantidad,
+    agente:nombre,
+    _idx:idx
+  })
+);
+      ag.cc.forEach((c,idx)=> ccRows.push({fecha, dia, aerolinea:c.aerolinea||'', tipo:c.tipo||'', vuelo:c.vuelo||'', destino:c.lugar||'', hora:c.hora||'', cantidad:c.cantidad, agente:nombre, _idx:idx}));
+      ag.ee.forEach((e,idx)=> eeRows.push({fecha, dia, categoria:e.categoria||'', vuelo:e.vuelo||'', destino:e.lugar||'', hora:e.hora||'', cantidad:e.cantidad, agente:nombre, _idx:idx}));
+    });
+  });
+  asqRows.sort((a,b)=> (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  ccRows.sort((a,b)=> (a.fecha+(a.hora||'99:99')).localeCompare(b.fecha+(b.hora||'99:99')));
+  eeRows.sort((a,b)=> a.fecha.localeCompare(b.fecha));
+
+  let html = '';
+
+  html += `<div class="day-card"><div class="day-head">ASQ — vuelos con encuesta asignada</div><div class="day-body">`;
+  if(asqRows.length===0){
+    html += '<p class="muted">Sin vuelos ASQ asignados esta semana.</p>';
+  } else {
+    html += `<table><thead><tr><th>Tipo de encuesta</th><th>Fecha</th><th>Día</th><th>Aerolínea</th><th>#Vuelo</th><th>Destino</th><th>Hora</th><th>N.º encuestas</th><th>Personal asignado</th></tr></thead><tbody>`;
+    asqRows.forEach(r=>{
+     html += `<tr><td><span class="pill asq">ASQ</span></td><td>${fmtFechaCorta(r.fecha)}</td><td>${r.dia}</td><td>${r.aerolinea}</td><td>${r.vuelo}</td><td>${r.destino}</td><td>${r.hora}</td><td><input type="number" min="1" value="${r.cantidad}" style="width:80px" onchange="editarASQ('${r.fecha}','${r.agente}',${r._idx},parseInt(this.value)||1)"></td><td><select onchange="cambiarAgente('${r.fecha}','asq','${r.agente}',${r._idx},this.value)">${state.roster.map(a=>`<option value="${a}" ${a===r.agente?'selected':''}>${a}</option>`).join('')}</select></td></tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  html += `</div></div>`;
+
+  html += `<div class="day-card"><div class="day-head">Comment Cards</div><div class="day-body">`;
+  if(ccRows.length===0){
+    html += '<p class="muted">Sin Comment Cards planeadas esta semana.</p>';
+  } else {
+    html += `<table><thead><tr><th>Tipo de encuesta</th><th>Fecha</th><th>Día</th><th>Aerolínea</th><th>Llegada/Salida</th><th>#Vuelo</th><th>Destino/Origen</th><th>Hora</th><th>N.º encuestas</th><th>Personal asignado</th></tr></thead><tbody>`;
+    ccRows.forEach(r=>{
+      const refIdx = ccEditRefs.push({fecha:r.fecha, agente:r.agente, idx:r._idx}) - 1;
+      html += `<tr><td><span class="pill cc">CC</span></td><td>${fmtFechaCorta(r.fecha)}</td><td>${r.dia}</td><td>${r.aerolinea}</td><td>${r.tipo}</td>`
+        + `<td><input type="text" value="${r.vuelo||''}" placeholder="Por asignar" style="min-width:70px" onchange="editarCC(${refIdx},'vuelo',this.value)"></td>`
+        + `<td><input type="text" value="${r.destino||''}" placeholder="—" style="min-width:70px" onchange="editarCC(${refIdx},'lugar',this.value)"></td>`
+        + `<td><input type="time" value="${r.hora||''}" style="min-width:90px" onchange="editarCC(${refIdx},'hora',this.value)"></td>`
+        + `<td><input type="number" min="1" value="${r.cantidad}" style="width:80px" onchange="editarCC(${refIdx},'cantidad',parseInt(this.value)||1)"></td>`
++ `<td>
+<select onchange="cambiarAgente('${r.fecha}','cc','${r.agente}',${r._idx},this.value)">
+${state.roster.map(a =>
+`<option value="${a}" ${a===r.agente?'selected':''}>${a}</option>`
+).join('')}
+</select>
+</td></tr>`;
+    });
+    html += '</tbody></table>';
+    html += '<p class="footer-note">Las filas sin vuelo específico ("Por asignar") se pueden completar a mano — el cambio se guarda solo.</p>';
+  }
+  html += `</div></div>`;
+
+  html += `<div class="day-card"><div class="day-head">Encuestas Específicas</div><div class="day-body">`;
+  if(eeRows.length===0){
+    html += '<p class="muted">Sin Específicas planeadas esta semana.</p>';
+  } else {
+    html += `<table><thead><tr><th>Tipo de encuesta</th><th>Fecha</th><th>Día</th><th>Categoría</th><th>#Vuelo (opcional)</th><th>Destino (opcional)</th><th>Hora (opcional)</th><th>N.º encuestas</th><th>Personal asignado</th></tr></thead><tbody>`;
+    eeRows.forEach(r=>{
+      const refIdx = eeEditRefs.push({fecha:r.fecha, agente:r.agente, idx:r._idx}) - 1;
+      html += `<tr><td><span class="pill ee">EE</span></td><td>${fmtFechaCorta(r.fecha)}</td><td>${r.dia}</td><td>${r.categoria}</td>`
+        + `<td><input type="text" value="${r.vuelo||''}" placeholder="Libre" style="min-width:70px" onchange="editarEE(${refIdx},'vuelo',this.value)"></td>`
+        + `<td><input type="text" value="${r.destino||''}" placeholder="—" style="min-width:70px" onchange="editarEE(${refIdx},'lugar',this.value)"></td>`
+        + `<td><input type="time" value="${r.hora||''}" style="min-width:90px" onchange="editarEE(${refIdx},'hora',this.value)"></td>`
+        + `<td><input type="number" min="1" value="${r.cantidad}" style="width:80px" onchange="editarEE(${refIdx},'cantidad',parseInt(this.value)||1)"></td>`
+        + `<select onchange="cambiarAgente('${r.fecha}','ee','${r.agente}',${r._idx},this.value)">`
+        + state.roster.map(a =>
+          `<option value="${a}" ${a===r.agente?'selected':''}>${a}</option>`
+        ).join('')
+        + `</select></td></tr>`;
+    });
+    html += '</tbody></table>';
+    html += '<p class="footer-note">El vuelo en EE es opcional — solo anótalo si esa Específica se aplicó durante un vuelo en particular.</p>';
+  }
+  html += `</div></div>`;
+
+  diasEl.innerHTML = html;
+}
+
+function marcarSemanaCompletada(){
+
+  const week = currentWeek();
+
+  if(
+    !week ||
+    (!week.plan && (!week.extras || week.extras.length === 0))
+  ){
+    alert(
+      'Genera primero el plan de la semana o registra algún vuelo extra.'
+    );
+    return;
+  }
+
+  if(
+    !confirm(
+      'Esto actualizará el avance mensual usando las encuestas REALMENTE realizadas. ¿Continuar?'
+    )
+  ){
+    return;
+  }
+
+  const sumaCC = {};
+  const sumaEE = {};
+
+  let contadas = 0;
+
+  if(week.plan){
+
+    Object.values(week.plan.asignacionPorDia)
+      .forEach(dia=>{
+
+        Object.values(dia.agentes)
+          .forEach(ag=>{
+
+            (ag.cc || []).forEach(it=>{
+
+              if(
+                Number(it.realizadas || 0) <= 0 ||
+                it.contabilizado
+              ){
+                return;
+              }
+
+              const tipoBase =
+                (it.tipo || '').startsWith('Llegada')
+                  ? 'Llegada'
+                  : (it.tipo || '').startsWith('Salida')
+                  ? 'Salida'
+                  : null;
+
+              if(tipoBase){
+
+                const key =
+                  it.aerolinea + '|' + tipoBase;
+
+                sumaCC[key] =
+                  (sumaCC[key] || 0) +
+                  Number(it.realizadas || 0);
+
+              }
+
+              it.contabilizado = true;
+              contadas++;
+
+            });
+
+            (ag.ee || []).forEach(it=>{
+
+              if(
+                Number(it.realizadas || 0) <= 0 ||
+                it.contabilizado
+              ){
+                return;
+              }
+
+              sumaEE[it.categoria] =
+                (sumaEE[it.categoria] || 0) +
+                Number(it.realizadas || 0);
+
+              it.contabilizado = true;
+              contadas++;
+
+            });
+
+          });
+
+      });
+
+  }
+
+  (week.extras || []).forEach(it=>{
+
+    if(it.contabilizado){
+      return;
+    }
+
+    if(it.tipo === 'cc'){
+
+      const key =
+        it.categoria + '|' + it.tipoLlegadaSalida;
+
+      sumaCC[key] =
+        (sumaCC[key] || 0) +
+        Number(it.cantidad || 0);
+
+    }else{
+
+      sumaEE[it.categoria] =
+        (sumaEE[it.categoria] || 0) +
+        Number(it.cantidad || 0);
+
+    }
+
+    it.contabilizado = true;
+    contadas++;
+
+  });
+
+  if(contadas === 0){
+
+    alert(
+      'No hay tareas nuevas con realizadas mayores a cero.'
+    );
+
+    return;
+  }
+
+  Object.entries(sumaCC)
+    .forEach(([key,cant])=>{
+
+      const [nombre,tipo] =
+        key.split('|');
+
+      const r =
+        state.ccQuota.find(
+          x => x.name === nombre
+        );
+
+      if(r){
+
+        if(tipo === 'Llegada'){
+          r.avanceLlegada += cant;
+        }else{
+          r.avanceSalida += cant;
+        }
+
+      }
+
+    });
+
+  Object.entries(sumaEE)
+    .forEach(([nombre,cant])=>{
+
+      const r =
+        state.eeQuota.find(
+          x => x.name === nombre
+        );
+
+      if(r){
+        r.avance += cant;
+      }
+
+    });
+
+  save();
+  renderConfig();
+
+  alert(
+    `Avance actualizado con ${contadas} registro(s).`
+  );
+
+}
+
+// ---------- BACKUP ----------
+function exportarJSON(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `asignador_encuestas_sjd_${fmtDate(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importarJSON(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      state = JSON.parse(e.target.result);
+      if(!state.itinerarioMensual) state.itinerarioMensual = [];
+      save();
+      renderConfig();
+      renderSemanas();
+      if(state.currentWeekStart){ document.getElementById('weekStart').value = state.currentWeekStart; renderDiasHorario(); renderASQTable(); renderItinerarioResumen(); renderExtras(); renderCumplimiento(); }
+      renderExtraAgentes(); onExtraTipoChange();
+      alert('Respaldo importado.');
+    }catch(err){ alert('Archivo inválido.'); }
+  };
+  reader.readAsText(file);
+}
+
+const CAMPOS_MENSUALES = ['roster','ccQuota','eeQuota','semanasRestantes','pisoPct','margenCC','margenEE',
+  'cuotaPorVuelo','cuotaPorVueloMax','ventanaHorasAntes','maxVuelosPorDiaCC','maxVuelosPorDiaCCSinASQ','maxVuelosPorDiaEE','agentesExcluidos','usuariosMap','asqAll','itinerarioMensual'];
+
+function exportarMensual(){
+  const datos = {};
+  CAMPOS_MENSUALES.forEach(k=> datos[k] = state[k]);
+  const blob = new Blob([JSON.stringify(datos,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `info_mensual_sjd_${fmtDate(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importarMensual(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const datos = JSON.parse(e.target.result);
+      CAMPOS_MENSUALES.forEach(k=>{ if(datos[k]!==undefined) state[k] = datos[k]; });
+      save();
+      renderConfig();
+      renderASQTable();
+      renderItinerarioResumen();
+      renderExtraAgentes();
+      onExtraTipoChange();
+      renderUsuariosMap();
+      renderDashboard();
+      alert('Información mensual cargada (semanas guardadas no se tocaron).');
+    }catch(err){ alert('Archivo inválido.'); }
+  };
+  reader.readAsText(file);
+}
+
+function porcentajeCumplimiento(item){
+
+  const planeadas = Number(item.planeadas || item.cantidad || 0);
+
+  const realizadas = Number(item.realizadas || 0);
+
+  if(planeadas === 0){
+    return 0;
+  }
+
+  return Math.round((realizadas / planeadas) * 100);
+
+}
+
+function actualizarEstadoAutomatico(item, fecha){
+
+  const planeadas =
+    Number(item.planeadas || item.cantidad || 0);
+
+  const realizadas =
+    Number(item.realizadas || 0);
+
+  const hoy = new Date();
+
+  hoy.setHours(0,0,0,0);
+
+  const fechaTarea = parseISO(fecha);
+
+  const fechaLimite = new Date(fechaTarea);
+
+  fechaLimite.setDate(fechaLimite.getDate() + 1);
+
+  // Tiene cumplimiento total
+
+  if(realizadas >= planeadas && planeadas > 0){
+
+    item.estado = 'realizado';
+
+    return;
+
+  }
+
+  // Tiene cumplimiento parcial
+
+  if(realizadas > 0){
+
+    item.estado = 'parcial';
+
+    return;
+
+  }
+
+  // Venció y no hizo nada
+
+  if(hoy > fechaLimite){
+
+    item.estado = 'no_realizado';
+
+    return;
+
+  }
+
+  // Sigue vigente
+
+  item.estado = 'pendiente';
+
+}
+
+  
+function normalizarTarea(item){
+
+  if(item.estado === undefined){
+    item.estado = item.realizado ? 'realizado' : 'pendiente';
+  }
+
+  if(item.planeadas === undefined){
+    item.planeadas = item.cantidad || 0;
+  }
+
+  if(item.realizadas === undefined){
+    item.realizadas = 0;
+  }
+
+  if(item.comentarios === undefined){
+    item.comentarios = '';
+  }
+
+  if(item.detalle === undefined){
+    item.detalle = [];
+  }
+
+  // Migración: filas de detalle creadas antes del checkbox "Hecha" se asumen completadas
+  item.detalle.forEach(d=>{
+    if(d.realizada === undefined) d.realizada = true;
+  });
+
+}
+
+// ---------- DETALLE POR ENCUESTA (nivel individual, para reportes tipo Corporativo) ----------
+let cumplimientoRefs = [];
+const filasDetalleAbiertas = new Set();
+
+function claveFilaDetalle(f){
+  return `${f.tipo}|${f.fecha}|${f.agente}|${f.idx}${f.esExtra?'|extra':''}`;
+}
+
+function nuevaFilaDetalle(agente, tipoDefault, realizada){
+  return {hora:'', encuestador:agente, terminal:'', tipoEncuesta:tipoDefault||'',
+    comentario:'', cumplioTiempo:'', motivo:'', usuario:'', realizada:!!realizada};
+}
+
+// Busca el turno real del agente ese día (para tomar terminal y ventana de horario planeados)
+function obtenerTurnoDeFila(f){
+  const week = currentWeek();
+  if(!week || !week.plan || !week.plan.asignacionPorDia[f.fecha]) return null;
+  const ag = week.plan.asignacionPorDia[f.fecha].agentes[f.agente];
+  return ag ? (ag.turno||null) : null;
+}
+
+// Prellena la fila con lo que ya sabemos por la planeación: hora del vuelo/bloque asignado,
+// terminal del turno del agente y tipo salidas/llegadas. Todo queda editable después.
+function prellenarDesdePlaneacion(f){
+  const turno = obtenerTurnoDeFila(f);
+  const item = f.item;
+  const fila = nuevaFilaDetalle(f.agente, tipoEncuestaDefault(item), false);
+  fila.hora = item.hora || '';
+  fila.terminal = (turno && turno.terminal) || (item.tipo && item.terminal) || '';
+  fila.usuario = (state.usuariosMap && state.usuariosMap[f.agente]) || '';
+  return fila;
+}
+
+function sincronizarRealizadasDesdeDetalle(item){
+  if(item.detalle && item.detalle.length>0){
+    item.realizadas = item.detalle.filter(d=>d.realizada).length;
+  }
+}
+
+function toggleDetalleFila(i){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  const clave = claveFilaDetalle(f);
+  if(filasDetalleAbiertas.has(clave)) filasDetalleAbiertas.delete(clave);
+  else filasDetalleAbiertas.add(clave);
+  renderCumplimiento();
+}
+
+// Quita una tarea asignada (del plan generado o de vuelos extra) para que deje de contar en el
+// cumplimiento del agente — pensado para cuando, por el motivo que sea, nunca se le notificó del
+// vuelo/bloque. No toca lo que ya esté marcado como contabilizado en el avance mensual.
+function eliminarTareaCumplimiento(i){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  const etiqueta = `${f.tipo.toUpperCase()} · ${f.agente} · ${fmtFechaCorta(f.fecha)}${f.detalle?' · '+f.detalle:''}`;
+  if(!confirm(`¿Eliminar esta tarea del plan?\n\n${etiqueta}\n\nYa no contará como planeada ni realizada para este agente. Si ya se contabilizó en el avance mensual, ese número no se toca.`)) return;
+
+  const week = currentWeek(); if(!week) return;
+
+  if(f.esExtra){
+    if(week.extras){
+      const pos = week.extras.indexOf(f.item);
+      if(pos>-1) week.extras.splice(pos,1);
+    }
+  } else if(week.plan && week.plan.asignacionPorDia[f.fecha]){
+    const ag = week.plan.asignacionPorDia[f.fecha].agentes[f.agente];
+    if(ag && ag[f.tipo]){
+      const pos = ag[f.tipo].indexOf(f.item);
+      if(pos>-1) ag[f.tipo].splice(pos,1);
+    }
+  }
+
+  save();
+  renderCumplimiento();
+  renderDashboard();
+}
+
+function tipoEncuestaDefault(item){
+  return item.tipo==='Salida' ? 'Salidas' : item.tipo==='Llegada' ? 'Llegadas' : '';
+}
+
+// Agrega UNA fila manual, ya marcada como hecha (flujo rápido para capturar una encuesta a la vez)
+function agregarDetalleEncuesta(i){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  normalizarTarea(f.item);
+  const fila = prellenarDesdePlaneacion(f);
+  fila.realizada = true;
+  f.item.detalle.push(fila);
+  filasDetalleAbiertas.add(claveFilaDetalle(f));
+  sincronizarRealizadasDesdeDetalle(f.item);
+  actualizarEstadoAutomatico(f.item, f.fecha);
+  save();
+  renderCumplimiento();
+  renderDashboard();
+}
+
+// Genera de golpe las filas que falten para llegar a "planeadas", sin marcarlas como hechas.
+// Sirve de plantilla: tú solo llenas hora/comentario/etc. y marcas "Hecha" cuando corresponda.
+function generarDetalleAutomatico(i){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  normalizarTarea(f.item);
+  const planeadas = Number(f.item.planeadas||0);
+  const faltan = planeadas - f.item.detalle.length;
+  for(let n=0; n<faltan; n++){
+    f.item.detalle.push(prellenarDesdePlaneacion(f));
+  }
+  filasDetalleAbiertas.add(claveFilaDetalle(f));
+  sincronizarRealizadasDesdeDetalle(f.item);
+  actualizarEstadoAutomatico(f.item, f.fecha);
+  save();
+  renderCumplimiento();
+  renderDashboard();
+}
+
+function editarDetalleEncuesta(i, detIdx, campo, valor){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  const d = f.item.detalle[detIdx]; if(!d) return;
+  d[campo] = (campo==='realizada') ? !!valor : valor;
+  if(campo==='realizada'){
+    sincronizarRealizadasDesdeDetalle(f.item);
+    actualizarEstadoAutomatico(f.item, f.fecha);
+    save();
+    renderCumplimiento();
+    renderDashboard();
+    return;
+  }
+  save();
+}
+
+// Cambiar el encuestador de una fila de detalle también actualiza su "usuario" de captura,
+// tomándolo del mapeo de "2 · Cuotas y avance" — así no hay que tocar los dos campos por separado.
+function editarEncuestadorDetalle(i, detIdx, nuevoAgente){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  const d = f.item.detalle[detIdx]; if(!d) return;
+  d.encuestador = nuevoAgente;
+  d.usuario = (state.usuariosMap && state.usuariosMap[nuevoAgente]) || '';
+  save();
+  renderCumplimiento();
+}
+
+// Navegación tipo hoja de cálculo dentro de la tabla de detalle: flechas arriba/abajo cambian de
+// fila en la misma columna; izquierda/derecha avanzan de campo cuando el cursor ya está en el
+// borde del texto (para no interferir con la edición normal).
+function manejarFlechasDetalle(e){
+  const key = e.key;
+  if(key!=='ArrowUp' && key!=='ArrowDown' && key!=='ArrowLeft' && key!=='ArrowRight') return;
+  const el = e.target;
+  const td = el.closest('td'); if(!td) return;
+  const tr = td.closest('tr'); if(!tr) return;
+  const cellIndex = Array.prototype.indexOf.call(tr.children, td);
+
+  function enfocar(elemento){
+    if(!elemento) return false;
+    e.preventDefault();
+    elemento.focus();
+    if(elemento.tagName==='INPUT' && elemento.select) { try{ elemento.select(); }catch(_){ } }
+    return true;
+  }
+  function controlEnFila(filaTr){
+    if(!filaTr) return null;
+    const celda = filaTr.children[cellIndex];
+    if(!celda) return null;
+    return celda.querySelector('input,select');
+  }
+
+  if(key==='ArrowUp'){ enfocar(controlEnFila(tr.previousElementSibling)); return; }
+  if(key==='ArrowDown'){ enfocar(controlEnFila(tr.nextElementSibling)); return; }
+
+  if(key==='ArrowLeft' || key==='ArrowRight'){
+    if(el.tagName==='INPUT' && (el.type==='text' || el.type==='time')){
+      const atStart = el.selectionStart===0 && el.selectionEnd===0;
+      const atEnd = el.selectionStart===el.value.length && el.selectionEnd===el.value.length;
+      if(key==='ArrowLeft' && !atStart) return;
+      if(key==='ArrowRight' && !atEnd) return;
+    } else if(el.tagName==='SELECT'){
+      return; // deja que el navegador maneje izquierda/derecha dentro del propio select
+    }
+    const dir = key==='ArrowLeft' ? -1 : 1;
+    let celda = td;
+    for(let paso=0; paso<6; paso++){
+      celda = dir<0 ? celda.previousElementSibling : celda.nextElementSibling;
+      if(!celda) break;
+      const ctrl = celda.querySelector('input,select');
+      if(ctrl){ enfocar(ctrl); break; }
+    }
+  }
+}
+
+function eliminarDetalleEncuesta(i, detIdx){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  f.item.detalle.splice(detIdx,1);
+  sincronizarRealizadasDesdeDetalle(f.item);
+  if(f.item.detalle.length===0){
+    // vuelve a modo manual: conserva el número que ya tenía capturado
+  }
+  actualizarEstadoAutomatico(f.item, f.fecha);
+  save();
+  renderCumplimiento();
+  renderDashboard();
+}
+
+function actualizarRealizadas(i, valor){
+
+  const f = cumplimientoRefs[i];
+
+  if(!f) return;
+
+  f.item.realizadas = Number(valor || 0);
+
+ actualizarEstadoAutomatico(
+  f.item,
+  f.fecha
+);
+
+  save();
+renderCumplimiento();
+renderDashboard();
+
+}
+
+
+
+function renderCumplimiento(){
+  const cont = document.getElementById('cumplimiento-tabla');
+  if(!cont) return;
+  const week = currentWeek();
+  if(!week){ cont.innerHTML = '<p class="muted">Activa primero una semana en la pestaña "1 · Semana activa".</p>'; return; }
+  const filas = [];
+  if(week.plan){
+    Object.keys(week.plan.asignacionPorDia).sort().forEach(fecha=>{
+      const dia = diaSemanaLabel(parseISO(fecha));
+      const agentes = week.plan.asignacionPorDia[fecha].agentes;
+      Object.keys(agentes).forEach(agente=>{
+        const ag = agentes[agente];
+        ag.asq.forEach((it,idx)=> filas.push({tipo:'asq', fecha, dia, agente, idx,
+          detalle:`${it.aerolinea||''} vuelo ${it.vuelo||''} ${it.hora||''}${it.destino?` (${it.destino})`:''}`, cantidad:it.cantidad, item:it}));
+        ag.cc.forEach((it,idx)=> filas.push({tipo:'cc', fecha, dia, agente, idx,
+          detalle:`${it.aerolinea||''} · ${it.tipo||''}${it.vuelo?` · vuelo ${it.vuelo} ${it.hora||''}`:''}`, cantidad:it.cantidad, item:it}));
+        ag.ee.forEach((it,idx)=> filas.push({tipo:'ee', fecha, dia, agente, idx,
+          detalle: it.categoria||'', cantidad:it.cantidad, item:it}));
+      });
+    });
+  }
+  (week.extras||[]).forEach((it,idx)=> filas.push({tipo:it.tipo, fecha:it.fecha, dia:diaSemanaLabel(parseISO(it.fecha)), agente:it.agente, idx, esExtra:true,
+    detalle:`${it.categoria||''}${it.tipoLlegadaSalida?' · '+it.tipoLlegadaSalida:''}${it.vuelo?` · vuelo ${it.vuelo} ${it.hora||''}`:''} (extra, fuera del plan)`, cantidad:it.cantidad, item:it}));
+  if(filas.length===0){ cont.innerHTML = '<p class="muted">Esta semana aún no tiene tareas. Genera el plan en la pestaña "6" o registra un vuelo extra abajo.</p>'; return; }
+  filas.sort((a,b)=> a.fecha.localeCompare(b.fecha));
+  cumplimientoRefs = filas;
+  const resumen = {
+  realizado: 0,
+  parcial: 0,
+  pendiente: 0,
+  no_realizado: 0
+};
+
+filas.forEach(f => {
+
+  normalizarTarea(f.item);
+
+  actualizarEstadoAutomatico(
+    f.item,
+    f.fecha
+  );
+
+  if(resumen[f.item.estado] !== undefined){
+    resumen[f.item.estado]++;
+  }
+
+});
+
+let html = `
+<p class="muted">
+✅ Realizadas: ${resumen.realizado}
+&nbsp;&nbsp;|&nbsp;&nbsp;
+🟡 Parciales: ${resumen.parcial}
+&nbsp;&nbsp;|&nbsp;&nbsp;
+⚪ Pendientes: ${resumen.pendiente}
+&nbsp;&nbsp;|&nbsp;&nbsp;
+🔴 No realizadas: ${resumen.no_realizado}
+</p>
+`;
+  html += `<table><thead><tr>
+
+<th>Tipo</th>
+
+<th>Fecha</th>
+
+<th>Detalle</th>
+
+<th>Planeadas</th>
+
+<th>Realizadas</th>
+
+<th>%</th>
+
+<th>Estado</th>
+
+<th>Personal</th>
+
+<th>Detalle</th>
+
+</tr></thead><tbody>`;
+  filas.forEach((f,i)=>{
+
+ 
+const pct = porcentajeCumplimiento(f.item);
+const clave = claveFilaDetalle(f);
+// Autogenera las filas de detalle (una por encuesta planeada) la primera vez que se ve el bloque,
+// para no depender de un clic extra en "Generar automático".
+if((!f.item.detalle || f.item.detalle.length===0) && Number(f.item.planeadas||0)>0){
+  normalizarTarea(f.item);
+  const planeadas = Number(f.item.planeadas||0);
+  for(let n=0;n<planeadas;n++){ f.item.detalle.push(prellenarDesdePlaneacion(f)); }
+  sincronizarRealizadasDesdeDetalle(f.item);
+  save();
+}
+const abierta = filasDetalleAbiertas.has(clave);
+const tieneDetalle = (f.item.detalle||[]).length>0;
+
+    html += `<tr>
+
+<td>
+<span class="pill ${f.tipo}">
+${f.tipo.toUpperCase()}
+</span>
+</td>
+
+<td>
+${fmtFechaCorta(f.fecha)}
+</td>
+
+<td>
+${f.detalle}
+</td>
+
+<td>
+${f.item.planeadas}
+</td>
+
+<td>
+
+<input
+type="number"
+min="0"
+value="${f.item.realizadas}"
+${tieneDetalle ? 'readonly title="Se calcula automáticamente según las encuestas capturadas en Detalle"' : `onchange="actualizarRealizadas(${i},this.value)"`}
+style="width:80px${tieneDetalle?';background:#F1EEF6':''}"
+>
+
+</td>
+
+<td>
+${pct}%
+</td>
+
+<td>
+${
+  f.item.estado === 'realizado'
+    ? '✅ Realizado'
+    : f.item.estado === 'parcial'
+    ? '🟡 Parcial'
+    : f.item.estado === 'no_realizado'
+    ? '🔴 No realizado'
+    : '⚪ Pendiente'
+}
+</td>
+
+<td>
+${f.agente}
+</td>
+
+<td>
+<div style="display:flex;gap:4px;">
+<button class="btn-detalle" onclick="toggleDetalleFila(${i})">${abierta?'▲':'▼'} ${(f.item.detalle||[]).length}</button>
+<button class="small del-btn" title="Eliminar esta tarea del plan (ej. no se le notificó al agente)" onclick="eliminarTareaCumplimiento(${i})">✕</button>
+</div>
+</td>
+
+</tr>`;
+
+    if(abierta){
+      const dets = f.item.detalle||[];
+      html += `<tr class="fila-detalle-cont"><td colspan="9">`;
+      if(dets.length>0){
+        html += `<table class="detalle-mini"><thead><tr>
+          <th>Hecha</th><th>Hora</th><th>Encuestador</th><th>Terminal</th><th>Tipo</th><th>Comentario</th><th>¿Cumplió en tiempo?</th><th>Motivo (si no / omisión)</th><th>Usuario</th><th></th>
+        </tr></thead><tbody>`;
+        dets.forEach((d,di)=>{
+          const opcionesAgente = state.roster.map(n=>`<option value="${n}" ${d.encuestador===n?'selected':''}>${n}</option>`).join('');
+          html += `<tr${d.realizada?'':' style="opacity:.6"'}>
+            <td style="text-align:center"><input type="checkbox" ${d.realizada?'checked':''} onchange="editarDetalleEncuesta(${i},${di},'realizada',this.checked)" onkeydown="manejarFlechasDetalle(event)"></td>
+            <td><input type="time" value="${d.hora||''}" onchange="editarDetalleEncuesta(${i},${di},'hora',this.value)" onkeydown="manejarFlechasDetalle(event)"></td>
+            <td><select onchange="editarEncuestadorDetalle(${i},${di},this.value)" onkeydown="manejarFlechasDetalle(event)">
+              <option value="" ${!d.encuestador?'selected':''}>—</option>
+              ${opcionesAgente}
+            </select></td>
+            <td><input type="text" value="${(d.terminal||'').replace(/"/g,'&quot;')}" onchange="editarDetalleEncuesta(${i},${di},'terminal',this.value)" onkeydown="manejarFlechasDetalle(event)" style="width:60px"></td>
+            <td><select onchange="editarDetalleEncuesta(${i},${di},'tipoEncuesta',this.value)" onkeydown="manejarFlechasDetalle(event)">
+              <option value="" ${!d.tipoEncuesta?'selected':''}>—</option>
+              <option value="Salidas" ${d.tipoEncuesta==='Salidas'?'selected':''}>Salidas</option>
+              <option value="Llegadas" ${d.tipoEncuesta==='Llegadas'?'selected':''}>Llegadas</option>
+            </select></td>
+            <td><div style="display:flex;gap:3px;align-items:center;">
+              <input type="text" value="${(d.comentario||'').replace(/"/g,'&quot;')}" onchange="editarDetalleEncuesta(${i},${di},'comentario',this.value)" onkeydown="manejarFlechasDetalle(event)" style="flex:1;min-width:90px">
+              <button type="button" class="small secondary" title="Rellenar con 'Sin comentarios.'" onclick="marcarSinComentariosDetalle(${i},${di})">S/C</button>
+            </div></td>
+            <td><select onchange="editarDetalleEncuesta(${i},${di},'cumplioTiempo',this.value)" onkeydown="manejarFlechasDetalle(event)">
+              <option value="" ${!d.cumplioTiempo?'selected':''}>—</option>
+              <option value="SI" ${d.cumplioTiempo==='SI'?'selected':''}>Sí</option>
+              <option value="NO" ${d.cumplioTiempo==='NO'?'selected':''}>No</option>
+            </select></td>
+            <td><input type="text" value="${(d.motivo||'').replace(/"/g,'&quot;')}" onchange="editarDetalleEncuesta(${i},${di},'motivo',this.value)" onkeydown="manejarFlechasDetalle(event)"></td>
+            <td><input type="text" value="${(d.usuario||'').replace(/"/g,'&quot;')}" onchange="editarDetalleEncuesta(${i},${di},'usuario',this.value)" onkeydown="manejarFlechasDetalle(event)" style="width:80px"></td>
+            <td><button class="small del-btn" onclick="eliminarDetalleEncuesta(${i},${di})">✕</button></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+      } else {
+        html += `<p class="muted" style="margin:0 0 8px;">Aún no hay encuestas individuales capturadas para este bloque (${f.item.planeadas} planeadas).</p>`;
+      }
+      const faltanPlantilla = Number(f.item.planeadas||0) - dets.length;
+      html += `<div style="display:flex;gap:8px;flex-wrap:wrap;">`;
+      if(faltanPlantilla>0){
+        html += `<button class="small ok detalle-add" onclick="generarDetalleAutomatico(${i})">⚡ Generar ${faltanPlantilla} fila(s) automáticas</button>`;
+      }
+      html += `<button class="small secondary detalle-add" onclick="agregarDetalleEncuesta(${i})">+ Agregar encuesta (marcada como hecha)</button>`;
+      html += `</div>`;
+      html += `</td></tr>`;
+    }
+  });
+  html += '</tbody></table>';
+  cont.innerHTML = html;
+}
+function marcarRealizado(i, checked){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  f.item.realizado = checked;
+  save();
+  const p = cumplimientoRefs.filter(x=>x.item.realizado).length;
+  const nota = document.querySelector('#cumplimiento-tabla p.muted');
+  if(nota) nota.textContent = `${p} de ${cumplimientoRefs.length} tareas marcadas como realizadas.`;
+}
+function editarComentario(i, valor){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  f.item.comentarios = valor;
+  save();
+}
+
+function marcarSinComentarios(i){
+  const f = cumplimientoRefs[i]; if(!f) return;
+  f.item.comentarios = 'Sin comentarios.';
+  const input = document.getElementById('coment-'+i);
+  if(input) input.value = 'Sin comentarios.';
+  save();
+}
+
+function marcarSinComentariosDetalle(i, detIdx){
+  editarDetalleEncuesta(i, detIdx, 'comentario', 'Sin comentarios.');
+  renderCumplimiento();
+}
+
+function renderDashboard(){
+
+  const cont =
+    document.getElementById(
+      'dashboard-kpis'
+    );
+
+  if(!cont) return;
+
+  const week = currentWeek();
+
+  if(!week || !week.plan){
+
+    cont.innerHTML =
+      '<p class="muted">Genera primero un plan semanal.</p>';
+
+    return;
+
+  }
+
+  let planeadas = 0;
+  let realizadas = 0;
+  let pendientes = 0;
+  let parciales = 0;
+  let noRealizadas = 0;
+
+  Object.values(
+    week.plan.asignacionPorDia
+  ).forEach(dia=>{
+
+    Object.values(dia.agentes)
+      .forEach(ag=>{
+
+        [...ag.cc,...ag.ee,...ag.asq]
+          .forEach(it=>{
+
+            planeadas += Number(
+              it.planeadas ||
+              it.cantidad ||
+              0
+            );
+
+            realizadas += Number(
+              it.realizadas ||
+              0
+            );
+
+            if(it.estado === 'realizado'){
+              pendientes += 0;
+            }
+
+          });
+
+      });
+
+  });
+
+  cumplimientoRefs.forEach(f=>{
+
+    switch(f.item.estado){
+
+      case 'realizado':
+        break;
+
+      case 'parcial':
+        parciales++;
+        break;
+
+      case 'pendiente':
+        pendientes++;
+        break;
+
+      case 'no_realizado':
+        noRealizadas++;
+        break;
+
+    }
+
+  });
+
+  const cumplimiento =
+    planeadas > 0
+      ? (
+          realizadas /
+          planeadas *
+          100
+        ).toFixed(1)
+      : 0;
+
+      const cuotaCC =
+  state.ccQuota.reduce(
+    (s,r)=>s+r.llegada+r.salida,
+    0
+  );
+
+const realizadaCC =
+  state.ccQuota.reduce(
+    (s,r)=>s+r.avanceLlegada+r.avanceSalida,
+    0
+  );
+
+const faltanteCC =
+  Math.max(
+    0,
+    cuotaCC - realizadaCC
+  );
+
+const pctCC =
+  cuotaCC
+    ? (
+        realizadaCC /
+        cuotaCC *
+        100
+      ).toFixed(1)
+    : 0;
+
+    const cuotaEE =
+  state.eeQuota.reduce(
+    (s,r)=>s+r.cuota,
+    0
+  );
+
+const realizadaEE =
+  state.eeQuota.reduce(
+    (s,r)=>s+r.avance,
+    0
+  );
+
+const faltanteEE =
+  Math.max(
+    0,
+    cuotaEE - realizadaEE
+  );
+
+const pctEE =
+  cuotaEE
+    ? (
+        realizadaEE /
+        cuotaEE *
+        100
+      ).toFixed(1)
+    : 0;
+const metaLlegadas =
+  state.ccQuota.reduce(
+    (s,r)=>s+r.llegada,
+    0
+  );
+
+const metaSalidas =
+  state.ccQuota.reduce(
+    (s,r)=>s+r.salida,
+    0
+  );
+
+const realLlegadas =
+  state.ccQuota.reduce(
+    (s,r)=>s+r.avanceLlegada,
+    0
+  );
+
+const realSalidas =
+  state.ccQuota.reduce(
+    (s,r)=>s+r.avanceSalida,
+    0
+  );
+
+const topGap = [...state.ccQuota]
+
+  .map(r => ({
+
+    code: r.code,
+
+    nombre: r.name,
+
+    meta:
+      r.llegada +
+      r.salida,
+
+    realizadas:
+      r.avanceLlegada +
+      r.avanceSalida,
+
+    faltantes:
+      Math.max(
+        0,
+        (r.llegada + r.salida) -
+        (r.avanceLlegada + r.avanceSalida)
+      )
+
+  }))
+
+  .sort(
+    (a,b)=>
+      b.faltantes -
+      a.faltantes
+  )
+
+  .slice(0,5);
+
+  const diasSemana = [
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+  'Domingo'
+];
+
+const metaDia =
+  Math.ceil(
+    cuotaCC * 0.085
+  );
+
+const cumplimientoDias =
+  diasSemana.map(dia => ({
+
+    dia,
+
+    realizadas: 0,
+
+    meta: metaDia
+
+  }));
+if(week && week.plan){
+
+  Object.keys(
+    week.plan.asignacionPorDia
+  ).forEach(fecha => {
+
+    const fechaObj =
+      parseISO(fecha);
+
+    const indice =
+      fechaObj.getDay() === 0
+      ? 6
+      : fechaObj.getDay() - 1;
+
+    Object.values(
+      week.plan.asignacionPorDia[fecha]
+        .agentes
+    ).forEach(ag => {
+
+      [...ag.cc, ...ag.ee]
+        .forEach(it => {
+
+          cumplimientoDias[
+            indice
+          ].realizadas +=
+            Number(
+              it.realizadas || 0
+            );
+
+        });
+
+    });
+
+  });
+
+}
+
+// Los "vuelos extra" (fuera del plan) no vivían en asignacionPorDia, así que se quedaban fuera
+// de este resumen por día aunque sí contaran para el avance mensual. Se agregan aquí también.
+if(week && week.extras){
+  week.extras.forEach(it=>{
+    if((it.tipo!=='cc' && it.tipo!=='ee') || !it.fecha) return;
+    const fechaObj = parseISO(it.fecha);
+    const indice = fechaObj.getDay()===0 ? 6 : fechaObj.getDay()-1;
+    if(it.realizado){
+      cumplimientoDias[indice].realizadas += Number(it.cantidad||0);
+    }
+  });
+}
+
+// ---------- ASQ: vuelos, cumplimiento por vuelo, por día y por aerolínea ----------
+const asqFilas = [];
+if(week && week.plan){
+  Object.keys(week.plan.asignacionPorDia).sort().forEach(fecha=>{
+    const agentes = week.plan.asignacionPorDia[fecha].agentes;
+    Object.keys(agentes).forEach(agente=>{
+      agentes[agente].asq.forEach(it=>{
+        asqFilas.push({
+          fecha, agente,
+          aerolinea: it.aerolinea||'', vuelo: it.vuelo||'', hora: it.hora||'', destino: it.destino||'',
+          planeadas: Number(it.planeadas || it.cantidad || 0),
+          realizadas: Number(it.realizadas||0),
+          estado: it.estado||'pendiente'
+        });
+      });
+    });
+  });
+}
+asqFilas.sort((a,b)=> (a.fecha+(a.hora||'99:99')).localeCompare(b.fecha+(b.hora||'99:99')));
+
+const asqPlaneadas = asqFilas.reduce((s,r)=>s+r.planeadas,0);
+const asqRealizadas = asqFilas.reduce((s,r)=>s+r.realizadas,0);
+const asqPct = asqPlaneadas ? (asqRealizadas/asqPlaneadas*100).toFixed(1) : 0;
+const asqSemaforo = asqPlaneadas===0 ? '⚪' : asqPct>=100 ? '🟢' : asqPct>=80 ? '🟡' : '🔴';
+const asqFilasIncumplidas = asqFilas.filter(r=> r.estado==='parcial' || r.estado==='no_realizado');
+const asqSinCobertura = (week && week.plan && week.plan.riesgos) ? week.plan.riesgos.filter(r=>r.startsWith('Sin cobertura ASQ')).length : 0;
+
+const asqDias = diasSemana.map(dia=>({dia, planeadas:0, realizadas:0}));
+asqFilas.forEach(r=>{
+  const idx = parseISO(r.fecha).getDay()===0 ? 6 : parseISO(r.fecha).getDay()-1;
+  asqDias[idx].planeadas += r.planeadas;
+  asqDias[idx].realizadas += r.realizadas;
+});
+
+const asqPorAerolinea = {};
+asqFilas.forEach(r=>{
+  const key = r.aerolinea || '—';
+  if(!asqPorAerolinea[key]) asqPorAerolinea[key] = {planeadas:0, realizadas:0};
+  asqPorAerolinea[key].planeadas += r.planeadas;
+  asqPorAerolinea[key].realizadas += r.realizadas;
+});
+
+// ---------- Cumplimiento por agente (ASQ + CC + EE, plan + vuelos extra) ----------
+const porAgente = {};
+function celdaAgente(nombre){
+  if(!porAgente[nombre]) porAgente[nombre] = {asqPlan:0, asqReal:0, ccPlan:0, ccReal:0, eePlan:0, eeReal:0};
+  return porAgente[nombre];
+}
+if(week && week.plan){
+  Object.values(week.plan.asignacionPorDia).forEach(dia=>{
+    Object.keys(dia.agentes).forEach(agente=>{
+      const ag = dia.agentes[agente];
+      const c = celdaAgente(agente);
+      (ag.asq||[]).forEach(it=>{ c.asqPlan += Number(it.planeadas||it.cantidad||0); c.asqReal += Number(it.realizadas||0); });
+      (ag.cc||[]).forEach(it=>{ c.ccPlan += Number(it.planeadas||it.cantidad||0); c.ccReal += Number(it.realizadas||0); });
+      (ag.ee||[]).forEach(it=>{ c.eePlan += Number(it.planeadas||it.cantidad||0); c.eeReal += Number(it.realizadas||0); });
+    });
+  });
+}
+if(week && week.extras){
+  week.extras.forEach(it=>{
+    if(!it.agente || (it.tipo!=='cc' && it.tipo!=='ee')) return;
+    const c = celdaAgente(it.agente);
+    const cant = Number(it.cantidad||0);
+    if(it.tipo==='cc'){ c.ccPlan += cant; if(it.realizado) c.ccReal += cant; }
+    else { c.eePlan += cant; if(it.realizado) c.eeReal += cant; }
+  });
+}
+const agentesOrdenados = Object.keys(porAgente)
+  .filter(nombre=> !['Heidi','Yolanda','Jesús'].map(x=>x.toLowerCase()).includes(nombre.trim().toLowerCase()))
+  .map(nombre=>{
+  const c = porAgente[nombre];
+  const plan = c.asqPlan + c.ccPlan + c.eePlan;
+  const real = c.asqReal + c.ccReal + c.eeReal;
+  const pct = plan>0 ? (real/plan*100) : 0;
+  return {nombre, ...c, plan, real, pct};
+}).sort((a,b)=> a.pct - b.pct);
+
+  cont.innerHTML = `
+
+  <div class="kpi-grid">
+
+    <div class="kpi">
+      <div class="n">${planeadas}</div>
+      <div class="l">Planeadas</div>
+    </div>
+
+    <div class="kpi">
+      <div class="n">${realizadas}</div>
+      <div class="l">Realizadas</div>
+    </div>
+
+    <div class="kpi">
+      <div class="n">${cumplimiento}%</div>
+      <div class="l">Cumplimiento</div>
+    </div>
+
+    <div class="kpi">
+      <div class="n">${noRealizadas}</div>
+      <div class="l">No realizadas</div>
+    </div>
+
+<div class="kpi">
+  <div class="n">${pctCC}%</div>
+  <div class="l">CC Total</div>
+</div>
+
+<div class="kpi">
+  <div class="n">${pctEE}%</div>
+  <div class="l">EE Total</div>
+</div>
+
+<div class="kpi">
+  <div class="n">${asqPct}%</div>
+  <div class="l">ASQ Total (${asqRealizadas}/${asqPlaneadas})</div>
+</div>
+
+<div class="kpi">
+  <div class="n">${asqSinCobertura}</div>
+  <div class="l">Vuelos ASQ sin cobertura</div>
+</div>
+
+<div class="kpi">
+  <div class="n">
+    ${realLlegadas}/${metaLlegadas}
+  </div>
+  <div class="l">
+    Llegadas
+  </div>
+</div>
+
+<div class="kpi">
+  <div class="n">
+    ${realSalidas}/${metaSalidas}
+  </div>
+  <div class="l">
+    Salidas
+  </div>
+</div>
+
+  </div>
+
+<h3>Cumplimiento por Agente</h3>
+
+<table>
+<thead><tr><th>Agente</th><th>ASQ</th><th>CC</th><th>EE</th><th>Total</th><th>%</th></tr></thead>
+<tbody>
+${agentesOrdenados.length===0 ? '<tr><td colspan="6" class="muted">Sin tareas asignadas esta semana.</td></tr>' : agentesOrdenados.map(a=>{
+  const semaforo = a.plan===0 ? '⚪' : a.pct>=100 ? '🟢' : a.pct>=80 ? '🟡' : '🔴';
+  return `<tr>
+    <td>${a.nombre}</td>
+    <td>${a.asqReal}/${a.asqPlan}</td>
+    <td>${a.ccReal}/${a.ccPlan}</td>
+    <td>${a.eeReal}/${a.eePlan}</td>
+    <td>${a.real}/${a.plan}</td>
+    <td>${semaforo} ${a.plan>0 ? a.pct.toFixed(1) : '—'}%</td>
+  </tr>`;
+}).join('')}
+</tbody>
+</table>
+
+<h3>ASQ — Cumplimiento de encuestas asignadas</h3>
+
+<div class="kpi-grid" style="margin-bottom:16px;">
+  <div class="kpi">
+    <div class="n">${asqSemaforo} ${asqPct}%</div>
+    <div class="l">Cumplimiento ASQ (${asqRealizadas}/${asqPlaneadas})</div>
+  </div>
+</div>
+
+${asqFilasIncumplidas.length===0
+  ? (asqFilas.length===0 ? '<p class="muted">Sin vuelos ASQ asignados esta semana.</p>' : '<p class="muted">🟢 Todos los vuelos ASQ cumplieron su cuota de encuestas esta semana.</p>')
+  : `<table>
+<thead><tr><th>Fecha</th><th>Hora</th><th>Aerolínea</th><th>Vuelo</th><th>Destino</th><th>Agente</th><th>Planeadas</th><th>Realizadas</th><th></th></tr></thead>
+<tbody>
+${asqFilasIncumplidas.map(r=>{
+  const emoji = r.estado==='parcial' ? '🟡' : '🔴';
+  return `<tr>
+    <td>${fmtFechaCorta(r.fecha)}</td><td>${r.hora}</td><td>${r.aerolinea}</td><td>${r.vuelo}</td><td>${r.destino}</td>
+    <td>${r.agente}</td><td>${r.planeadas}</td><td>${r.realizadas}</td><td>${emoji}</td>
+  </tr>`;
+}).join('')}
+</tbody>
+</table>`}
+
+<h3>ASQ — Cumplimiento por día</h3>
+
+<table>
+<thead><tr><th>Día</th><th>Planeadas</th><th>Realizadas</th><th>Estado</th></tr></thead>
+<tbody>
+${asqDias.map(d=>{
+  const pct = d.planeadas>0 ? (d.realizadas/d.planeadas*100) : (d.realizadas>0?100:0);
+  const estado = d.planeadas===0 ? '⚪' : pct>=100 ? '🟢' : pct>=80 ? '🟡' : '🔴';
+  return `<tr><td>${d.dia}</td><td>${d.planeadas}</td><td>${d.realizadas}</td><td>${estado}</td></tr>`;
+}).join('')}
+</tbody>
+</table>
+
+<h3>ASQ — Cumplimiento por aerolínea</h3>
+
+<table>
+<thead><tr><th>Aerolínea</th><th>Planeadas</th><th>Realizadas</th><th>%</th></tr></thead>
+<tbody>
+${Object.keys(asqPorAerolinea).length===0 ? '<tr><td colspan="4" class="muted">Sin datos ASQ esta semana.</td></tr>' : Object.keys(asqPorAerolinea).sort().map(nombre=>{
+  const r = asqPorAerolinea[nombre];
+  const pct = r.planeadas>0 ? (r.realizadas/r.planeadas*100).toFixed(1) : 0;
+  const semaforo = pct>=100 ? '🟢' : pct>=80 ? '🟡' : '🔴';
+  return `<tr><td>${nombre}</td><td>${r.planeadas}</td><td>${r.realizadas}</td><td>${semaforo} ${pct}%</td></tr>`;
+}).join('')}
+</tbody>
+</table>
+
+<h3>Cumplimiento por Aerolínea</h3>
+
+<table>
+
+<thead>
+<tr>
+  <th>Aerolínea</th>
+  <th>Meta</th>
+  <th>Realizadas</th>
+  <th>Faltantes</th>
+  <th>%</th>
+</tr>
+</thead>
+
+<tbody>
+
+${state.ccQuota.map(r => {
+
+  const meta =
+    r.llegada +
+    r.salida;
+
+  const realizadas =
+    r.avanceLlegada +
+    r.avanceSalida;
+
+  const faltantes =
+  Math.max(
+    0,
+    meta - realizadas
+  );
+
+  const pct =
+    meta > 0
+      ? (
+          realizadas /
+          meta *
+          100
+        ).toFixed(1)
+      : 0;
+
+      let semaforo = '🔴';
+
+if(pct >= 100){
+  semaforo = '🟢';
+}
+else if(pct >= 80){
+  semaforo = '🟡';
+}
+
+  return `
+    <tr>
+      <td>${r.code}</td>
+      <td>${meta}</td>
+      <td>${realizadas}</td>
+      <td>${faltantes}</td>
+      <td>${semaforo} ${pct}%</td>
+    </tr>
+  `;
+
+}).join('')}
+
+</tbody>
+
+</table>
+<h3>Top 5 GAP Corporativo</h3>
+
+<table>
+
+<thead>
+<tr>
+  <th>Ranking</th>
+  <th>Aerolínea</th>
+  <th>Faltantes</th>
+</tr>
+</thead>
+
+<tbody>
+
+${topGap.map((r,i)=>`
+
+<tr>
+
+<td>
+${i+1}
+</td>
+
+<td>
+${r.code}
+</td>
+
+<td>
+${r.faltantes}
+</td>
+
+</tr>
+
+`).join('')}
+
+</tbody>
+
+</table>
+<h3>
+Cumplimiento 8.5% por Día
+</h3>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Día</th>
+<th>Meta</th>
+<th>Realizadas</th>
+<th>Estado</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+${cumplimientoDias.map(d => {
+
+  const pct =
+    d.meta > 0
+      ? (
+          d.realizadas /
+          d.meta *
+          100
+        )
+      : 0;
+
+  let estado = '🔴';
+
+  if(pct >= 100){
+    estado = '🟢';
+  }
+  else if(pct >= 80){
+    estado = '🟡';
+  }
+
+  return `
+
+  <tr>
+
+    <td>${d.dia}</td>
+
+    <td>${d.meta}</td>
+
+    <td>${d.realizadas}</td>
+
+    <td>${estado}</td>
+
+  </tr>
+
+  `;
+
+}).join('')}
+
+</tbody>
+
+</table>
+  `;
+
+}
+
+
+// ---------- EXPORTAR PARA COMPARTIR (HTML / PDF) ----------
+function construirFilasCompartir(){
+  const week = currentWeek();
+  if(!week || !week.plan) return [];
+  const filas = [];
+  Object.keys(week.plan.asignacionPorDia).sort().forEach(fecha=>{
+    const dia = diaSemanaLabel(parseISO(fecha));
+    const agentes = week.plan.asignacionPorDia[fecha].agentes;
+    Object.keys(agentes).forEach(agente=>{
+      const ag = agentes[agente];
+      ag.asq.forEach(it=> filas.push({tipo:'ASQ', fecha, dia, agente,
+        detalle:`${it.aerolinea||''} vuelo ${it.vuelo||''} ${it.hora||''}${it.destino?` (${it.destino})`:''}`, cantidad:it.cantidad}));
+      ag.cc.forEach(it=> filas.push({tipo:'CC', fecha, dia, agente,
+        detalle:`${it.aerolinea||''} · ${it.tipo||''}${it.vuelo?` · vuelo ${it.vuelo} ${it.hora||''}`:''}`, cantidad:it.cantidad}));
+      ag.ee.forEach(it=> filas.push({tipo:'EE', fecha, dia, agente, detalle: it.categoria||'', cantidad:it.cantidad}));
+    });
+  });
+  filas.sort((a,b)=> a.fecha.localeCompare(b.fecha));
+  return filas;
+}
+
+function construirTablaFilasHTML(filas){
+  return filas.map(f=>
+    `<tr data-dia="${f.dia}" data-agente="${f.agente.toLowerCase()}">
+      <td><span class="pill pill-${f.tipo.toLowerCase()}">${f.tipo}</span></td>
+      <td>${fmtFechaCorta(f.fecha)}</td>
+      <td>${f.dia}</td>
+      <td>${f.detalle}</td>
+      <td>${f.cantidad}</td>
+      <td>${f.agente}</td>
+    </tr>`
+  ).join('');
+}
+
+function exportarPlanHTML(){
+  const filas = construirFilasCompartir();
+  if(filas.length===0){ alert('Genera primero el plan de la semana.'); return; }
+  const dias = [...new Set(filas.map(f=>f.dia))];
+  const rango = state.currentWeekStart ? `${fmtFechaCorta(state.currentWeekStart)} — ${fmtFechaCorta(fmtDate(addDays(parseISO(state.currentWeekStart),6)))}` : '';
+  const html = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan semanal de encuestas · SJD</title>
+<style>
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#F6F5F8;color:#2A2233;margin:0;padding:16px;}
+  h1{color:#57137D;font-size:20px;margin:0 0 4px;}
+  .sub{color:#6E647A;font-size:13px;margin-bottom:16px;}
+  .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;position:sticky;top:0;background:#F6F5F8;padding:8px 0;}
+  select, input{padding:8px;border:1px solid #E4DFEA;border-radius:6px;font-size:14px;}
+  input{flex:1;min-width:160px;}
+  table{width:100%;border-collapse:collapse;background:#fff;font-size:13px;}
+  th,td{border:1px solid #E4DFEA;padding:7px 8px;text-align:left;}
+  th{background:#F1EEF6;color:#57137D;}
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;}
+  .pill-cc{background:#57137D;} .pill-ee{background:#70AF25;} .pill-asq{background:#E27100;}
+  .conteo{font-size:12px;color:#6E647A;margin:8px 0;}
+  tr.oculto{display:none;}
+</style></head>
+<body>
+  <h1>Plan semanal de encuestas · SJD</h1>
+  <div class="sub">${rango}</div>
+  <div class="filtros">
+    <select id="fDia" onchange="filtrar()">
+      <option value="">Todos los días</option>
+      ${dias.map(d=>`<option value="${d}">${d}</option>`).join('')}
+    </select>
+    <input id="fNombre" type="text" placeholder="Buscar mi nombre..." oninput="filtrar()">
+  </div>
+  <div class="conteo" id="conteo"></div>
+  <table>
+    <thead><tr><th>Tipo</th><th>Fecha</th><th>Día</th><th>Detalle</th><th>N.º encuestas</th><th>Personal</th></tr></thead>
+    <tbody id="filas">${construirTablaFilasHTML(filas)}</tbody>
+  </table>
+  <script>
+    function filtrar(){
+      const dia = document.getElementById('fDia').value;
+      const nombre = document.getElementById('fNombre').value.trim().toLowerCase();
+      const filas = document.querySelectorAll('#filas tr');
+      let visibles = 0;
+      filas.forEach(tr=>{
+        const okDia = !dia || tr.dataset.dia===dia;
+        const okNombre = !nombre || tr.dataset.agente.includes(nombre);
+        if(okDia && okNombre){ tr.classList.remove('oculto'); visibles++; }
+        else tr.classList.add('oculto');
+      });
+      document.getElementById('conteo').textContent = visibles + ' de ' + filas.length + ' tareas mostradas';
+    }
+    filtrar();
+  <\/script>
+</body></html>`;
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `plan_semanal_sjd_${state.currentWeekStart||fmtDate(new Date())}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportarPlanPDF(){
+  const filas = construirFilasCompartir();
+  if(filas.length===0){ alert('Genera primero el plan de la semana.'); return; }
+  const rango = state.currentWeekStart ? `${fmtFechaCorta(state.currentWeekStart)} — ${fmtFechaCorta(fmtDate(addDays(parseISO(state.currentWeekStart),6)))}` : '';
+  const win = window.open('', '_blank');
+  if(!win){ alert('El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes e inténtalo de nuevo.'); return; }
+  win.document.write(`<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>Plan semanal de encuestas · SJD</title>
+<style>
+  body{font-family:Arial,sans-serif;color:#111;margin:20px;}
+  h1{color:#57137D;font-size:18px;margin:0 0 4px;}
+  .sub{color:#555;font-size:12px;margin-bottom:14px;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  th,td{border:1px solid #999;padding:5px 6px;text-align:left;}
+  th{background:#EEE;}
+  .pill{display:inline-block;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;}
+  .pill-cc{background:#57137D;} .pill-ee{background:#70AF25;} .pill-asq{background:#E27100;}
+  @media print{ body{margin:8mm;} }
+</style></head>
+<body>
+  <h1>Plan semanal de encuestas · SJD</h1>
+  <div class="sub">${rango}</div>
+  <table>
+    <thead><tr><th>Tipo</th><th>Fecha</th><th>Día</th><th>Detalle</th><th>N.º encuestas</th><th>Personal</th></tr></thead>
+    <tbody>${construirTablaFilasHTML(filas)}</tbody>
+  </table>
+</body></html>`);
+  win.document.close();
+  win.onload = ()=>{ win.focus(); win.print(); };
+  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 400);
+}
+
+// ---------- VUELOS EXTRA (fuera del plan) ----------
+function onExtraTipoChange(){
+  const tipo = document.getElementById('extraTipo').value;
+  const sel = document.getElementById('extraCategoria');
+  const label = document.getElementById('extraCategoriaLabel');
+  const wrapLS = document.getElementById('extraLlegadaSalidaWrap');
+  if(tipo==='cc'){
+    label.textContent = 'Aerolínea';
+    sel.innerHTML = state.ccQuota.map(r=>`<option value="${r.name}">${r.name}</option>`).join('');
+    wrapLS.style.display = '';
+  } else {
+    label.textContent = 'Categoría';
+    sel.innerHTML = state.eeQuota.map(r=>`<option value="${r.name}">${r.name}</option>`).join('');
+    wrapLS.style.display = 'none';
+  }
+}
+function renderExtraAgentes(){
+  const sel = document.getElementById('extraAgente');
+  if(!sel) return;
+  sel.innerHTML = state.roster.filter(n=>!(state.agentesExcluidos||[]).map(x=>x.trim().toLowerCase()).includes(n.trim().toLowerCase()))
+    .map(n=>`<option value="${n}">${n}</option>`).join('');
+}
+function agregarExtra(){
+  if(!state.currentWeekStart){ alert('Activa primero una semana en la pestaña "1 · Semana activa".'); return; }
+  const week = currentWeek();
+  if(!week.extras) week.extras = [];
+  const tipo = document.getElementById('extraTipo').value;
+  const categoria = document.getElementById('extraCategoria').value;
+  const fecha = document.getElementById('extraFecha').value || state.currentWeekStart;
+  const cantidad = +document.getElementById('extraCantidad').value || 1;
+  const agente = document.getElementById('extraAgente').value;
+  if(!agente){ alert('Agrega al menos un nombre en el roster (pestaña 3).'); return; }
+  const extra = {
+    tipo, categoria, fecha, cantidad, agente,
+    tipoLlegadaSalida: tipo==='cc' ? document.getElementById('extraLlegadaSalida').value : null,
+    vuelo: document.getElementById('extraVuelo').value.trim(),
+    hora: document.getElementById('extraHora').value,
+    comentarios: document.getElementById('extraComentarios').value.trim(),
+    realizado: true, contabilizado: false
+  };
+  week.extras.push(extra);
+  save();
+  document.getElementById('extraVuelo').value = '';
+  document.getElementById('extraHora').value = '';
+  document.getElementById('extraCantidad').value = 1;
+  document.getElementById('extraComentarios').value = '';
+  renderExtras();
+  renderCumplimiento();
+}
+// Importa en bloque encuestas ya realizadas (ej. de un reporte histórico de Corporativo) como
+// "vuelos extra" con su fecha real. Formato esperado: {weekStart:'YYYY-MM-DD', extras:[{tipo,categoria,
+// tipoLlegadaSalida,fecha,cantidad,agente,vuelo,hora,comentarios,contabilizado}]}. Si un registro no trae
+// "contabilizado", se asume true (para no duplicar un total que ya hayas cargado a mano en Cuotas y avance).
+function importarHistorialCumplimiento(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const datos = JSON.parse(e.target.result);
+      const weekKey = datos.weekStart;
+      const lista = datos.extras || [];
+      if(!weekKey || lista.length===0){ alert('El archivo no trae "weekStart" o "extras".'); return; }
+      if(!state.weeks[weekKey]) state.weeks[weekKey] = { turnos:{}, plan:null, extras:[] };
+      if(!state.weeks[weekKey].extras) state.weeks[weekKey].extras = [];
+      let agregadas = 0;
+      lista.forEach(it=>{
+        if(!it.fecha || !it.tipo) return;
+        state.weeks[weekKey].extras.push({
+          tipo: it.tipo, categoria: it.categoria||'', fecha: it.fecha, cantidad: +it.cantidad||1,
+          agente: it.agente||'', tipoLlegadaSalida: it.tipoLlegadaSalida||null,
+          vuelo: it.vuelo||'', hora: it.hora||'', comentarios: it.comentarios||'',
+          realizado: true, contabilizado: (it.contabilizado===undefined) ? true : !!it.contabilizado
+        });
+        agregadas++;
+      });
+      save();
+      renderSemanas();
+      if(state.currentWeekStart===weekKey){ renderExtras(); renderCumplimiento(); }
+      renderDashboard();
+      alert(`Se agregaron ${agregadas} registros a la semana ${weekKey}. Actívala en "1 · Semana activa" para verlas en Cumplimiento.`);
+    }catch(err){ alert('Archivo inválido: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+
+// Junta cada encuesta capturada (todas las semanas, todos los bloques de detalle) más los vuelos
+// extra, en una sola lista plana, y la descarga como JSON. Pensado como respaldo / para compartir,
+// no se conecta de vuelta a la herramienta automáticamente (para eso está "Importar historial").
+function exportarHistorialCumplimiento(){
+  const registros = [];
+
+  Object.keys(state.weeks).sort().forEach(weekKey=>{
+    const week = state.weeks[weekKey];
+
+    if(week.plan){
+      Object.keys(week.plan.asignacionPorDia).sort().forEach(fecha=>{
+        const agentes = week.plan.asignacionPorDia[fecha].agentes;
+        Object.keys(agentes).forEach(agente=>{
+          const ag = agentes[agente];
+          ['asq','cc','ee'].forEach(tipo=>{
+            (ag[tipo]||[]).forEach(item=>{
+              const categoria = item.aerolinea || item.categoria || '';
+              (item.detalle||[]).forEach(d=>{
+                registros.push({
+                  semana: weekKey, tipo, fecha, categoria,
+                  tipoLlegadaSalida: d.tipoEncuesta || (item.tipo||'') ,
+                  vuelo: item.vuelo || '', horaPlaneada: item.hora || '',
+                  agenteAsignado: agente, encuestador: d.encuestador || agente,
+                  terminal: d.terminal || '', horaEncuesta: d.hora || '',
+                  comentario: d.comentario || '', cumplioTiempo: d.cumplioTiempo || '',
+                  motivo: d.motivo || '', usuario: d.usuario || '',
+                  realizada: !!d.realizada, origen: 'plan'
+                });
+              });
+            });
+          });
+        });
+      });
+    }
+
+    (week.extras||[]).forEach(e=>{
+      registros.push({
+        semana: weekKey, tipo: e.tipo, fecha: e.fecha, categoria: e.categoria || '',
+        tipoLlegadaSalida: e.tipoLlegadaSalida || '', vuelo: e.vuelo || '', horaPlaneada: '',
+        agenteAsignado: e.agente || '', encuestador: e.agente || '', terminal: '',
+        horaEncuesta: e.hora || '', comentario: e.comentarios || '', cumplioTiempo: '',
+        motivo: '', usuario: '', realizada: !!e.realizado, origen: 'extra'
+      });
+    });
+  });
+
+  if(registros.length===0){ alert('Todavía no hay nada capturado en Cumplimiento.'); return; }
+
+  const payload = { generado: new Date().toISOString(), totalRegistros: registros.length, registros };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `historial_cumplimiento_sjd_${fmtDate(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function eliminarExtra(i){
+  const week = currentWeek();
+  if(!week.extras) return;
+  week.extras.splice(i,1);
+  save();
+  renderExtras();
+  renderCumplimiento();
+}
+function renderExtras(){
+  const cont = document.getElementById('extras-lista');
+  if(!cont) return;
+  const week = currentWeek();
+  const extras = (week && week.extras) || [];
+  if(extras.length===0){ cont.innerHTML = '<p class="muted">Sin vuelos extra registrados esta semana.</p>'; return; }
+  let html = `<table><thead><tr><th>Tipo</th><th>Fecha</th><th>Categoría</th><th>Vuelo</th><th>Cantidad</th><th>Personal</th><th>Comentarios</th><th></th></tr></thead><tbody>`;
+  extras.forEach((e,i)=>{
+    html += `<tr><td><span class="pill ${e.tipo}">${e.tipo.toUpperCase()}</span></td><td>${fmtFechaCorta(e.fecha)}</td>`
+      + `<td>${e.categoria}${e.tipoLlegadaSalida?' · '+e.tipoLlegadaSalida:''}</td><td>${e.vuelo||'—'}</td><td>${e.cantidad}</td><td>${e.agente}</td>`
+      + `<td>${e.comentarios||''}</td><td><button class="del-btn small" onclick="eliminarExtra(${i})">×</button></td></tr>`;
+  });
+  html += '</tbody></table>';
+  cont.innerHTML = html;
+}
+
+// ---------- INIT ----------
+load();
+setupDropzone('dropHorario','fileHorario','pasteHorario');
+setupDropzone('dropASQ','fileASQ','pasteASQ');
+renderConfig();
+renderSemanas();
+onExtraTipoChange();
+renderExtraAgentes();
+if(state.currentWeekStart){
+  document.getElementById('weekStart').value = state.currentWeekStart;
+  renderDiasHorario();
+  renderASQTable();
+  renderItinerarioResumen();
+  const label = document.getElementById('horario-semana-label');
+  if(label) label.textContent = fmtLegible(parseISO(state.currentWeekStart)) + ' — ' + fmtLegible(addDays(parseISO(state.currentWeekStart),6));
+  renderExtras();
+  renderCumplimiento();
+  renderDashboard();
+} else {
+  document.getElementById('dias-horario').innerHTML = '<p class="muted">Selecciona o crea una semana en la pestaña "1 · Semana activa".</p>';
+  renderItinerarioResumen();
+}
+if(currentWeek() && currentWeek().plan){
+  renderPlan();
+  renderDashboard();
+}
+</script>
+</body>
+</html>
